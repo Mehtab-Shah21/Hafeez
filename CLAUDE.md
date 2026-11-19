@@ -120,34 +120,26 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Projects / Clients (index + case study)
   - [x] Blog index + post (Article JSON-LD, sanitised HTML)
   - [x] Legal (privacy, terms), credits page, 404
-- [ ] **Step 6: Admin panel**
-  - [ ] Login + shell + RBAC-aware nav
-  - [ ] Dashboard
-  - [ ] Company information (global settings)
-  - [ ] Page/content editor (draft/publish)
-  - [ ] Hero manager
-  - [ ] Services CRUD
-  - [ ] Equipment CRUD (+ categories)
-  - [ ] Fleet CRUD
-  - [ ] Clients/Partners CRUD
-  - [ ] Testimonials CRUD
-  - [ ] Projects CRUD
-  - [ ] Team CRUD
-  - [ ] FAQs CRUD
-  - [ ] Blog CRUD (TipTap)
-  - [ ] Media library (compress, WebP/AVIF, required alt)
-  - [ ] Inquiries inbox (status, notes, CSV, email)
-  - [ ] Users & roles
-  - [ ] Audit log
+- [x] **Step 6: Admin panel** (2026-11-20) at  (client-only, noindex, own lazy chunk)
+  - [x] Login + shell + RBAC-aware nav (Super Admin / Editor / SEO Manager), silent token refresh
+  - [x] Dashboard (new inquiries, quotes 30d, latest inquiries, recent activity, SEO health)
+  - [x] Company information (names/tagline/about EN+AR, logos, favicon, phones, WhatsApp, emails, branches + coords, hours, social, licence/TRN, default language), theme colours, navbar + footer
+  - [x] Page/content editor (title/intro per page; sections as EN/AR JSON with draft → publish)
+  - [x] Hero manager (mode vector/video, video URLs, poster, background photo, headline lines, CTAs, badges, intensity)
+  - [x] CRUD via one generic factory + field configs: Services, Equipment (+ gallery), Equipment categories, Fleet, Clients, Testimonials, Projects, Team, FAQs, Blog (TipTap, sanitised), Redirects
+  - [x] Media library (sharp → WebP + AVIF at 480/960/1600/max, metadata stripped, alt text required EN+AR, SVG rejected)
+  - [x] Inquiries inbox (filters, status, notes, CSV export with formula-injection guard, private attachment download)
+  - [x] Users & roles (create, role change, deactivate, reset password; sessions revoked on change; no self-demotion)
+  - [x] Audit log (every write, with before/after on updates)
   - **SEO Manager**
-  - [ ] Per-page/item meta fields with counters (EN/AR)
-  - [ ] Live SERP preview (desktop/mobile) + social preview
-  - [ ] SEO score/checklist with fix hints
-  - [ ] JSON-LD auto-gen + manual override
-  - [ ] sitemap.xml + editable robots.txt
-  - [ ] Redirect manager + 404 log with suggestions
-  - [ ] Global SEO settings (title template, verification, GA4/GTM, Pixel, custom scripts)
-  - [ ] Bulk SEO table with inline editing
+  - [x] Per-page/item meta (title, description with live counters, focus keyword, canonical, robots, OG, Twitter) per language
+  - [x] Live Google preview (desktop/mobile) + social share preview
+  - [x] SEO score/checklist (keyword in title/H1/first paragraph/URL/description, lengths, H1, headings, alt coverage, internal links, word count, readability) with fix hints
+  - [x] JSON-LD: automatic per page type + manual override field
+  - [ ] sitemap.xml + robots.txt serving (robots text editable now; serving in Step 7)
+  - [x] Redirect manager (301/302/410, hit counts, cache invalidation) + 404 log with closest-path suggestions and one-click redirect
+  - [x] Global SEO settings (title template, default OG image, Google/Bing verification, GA4/GTM/Pixel IDs, custom head/body code with warning)
+  - [x] Bulk SEO table with inline title/description editing and re-score
 - [ ] **Step 7: SEO/technical pass**
 - [ ] **Step 8: Performance and accessibility audit**
 
@@ -200,6 +192,9 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 | 2026-11-20 | Equipment filters live in the URL (`?category&min&max&operator`) | Filtered views are shareable and server-rendered with the same query keys |
 | 2026-11-20 | Inquiry attachments stored in `uploads-private/` (never served), downloaded via the admin API | Customer files are not public |
 | 2026-11-20 | Cards without photos render a machinery illustration on a gradient | No broken/empty images while stock or client photos are pending |
+| 2026-11-20 | Admin CRUD = one server factory () + one client form renderer driven by per-module field configs validated by the shared Zod schemas | 12 modules with identical behaviour, validation and auditing; adding a module is a config entry |
+| 2026-11-20 | Section content edited as EN/AR JSON with draft/publish | Sections have different shapes per type; JSON keeps every section editable without a bespoke form each |
+| 2026-11-20 | Public pages are lazy route chunks (React Router ), matched chunks resolved before  | Home route JS dropped from 223 kB to ~176 kB gzip |
 | 2026-11-20 | Push to GitHub after every completed step (user instruction) | — |
 | 2026-11-19 | GateGuard (ECC plugin) exempted for `apps/**, packages/**, prisma/**, scripts/**, docs/**` via `.claude/settings.local.json` env | User approved; it was blocking every first file write. Destructive-shell checks stay on |
 
@@ -239,6 +234,7 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
+- **2026-11-20** — Step 6 done: server  (crud factory, content, settings, media/sharp, inquiries/users/audit/dashboard, SEO with ),  (); web . Route-level code splitting (React Router , resolved before hydration). 35 tests pass; admin checked in browser (login, dashboard, service + SEO panel save, company settings save, equipment save).
 - **2026-11-20** — Step 5 done: pages (`apps/web/src/pages/{About,Services,Equipment,Logistics,Contact,Content}.tsx`, Home rebuilt), `components/{cards,Testimonials,logistics}.tsx`, `components/forms/InquiryForm.tsx`, `components/ui/blocks.tsx`, `components/machinery/icons.tsx`; server: team/credits endpoints, multipart inquiries (private `uploads-private/`), Nodemailer/Resend mailer, storage adapter (local/S3/Cloudinary), sanitize-html. 26 tests pass; every page SSR-checked (1 H1, title, JSON-LD, 404s).
 - **2026-11-20** — Step 4 done: `hero/{Hero,HeroScene,useHeroScroll,useScrollVideo}.tsx`, `config/hero.ts`, hero CSS keyframes; Vite HMR now shares the app port (`createSsrHost(httpServer)`). Verified pin + sequence at 1440 with `?motion=force` (the browser pane runs with reduced motion on).
 - **2026-11-20** — Step 3 done: `apps/web/src/locales/{en,ar}.ts`, `lib/{i18n,raf,motion,links}.ts`, `data/request.tsx`, `components/layout/*`, `components/motion/SmoothScroll.tsx`, LangLayout, entries, SSR preloader cookie. Checked desktop EN + mobile AR (menu, CTA bar).

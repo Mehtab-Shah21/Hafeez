@@ -16,7 +16,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { redirects } from './middleware/redirects.js';
 import { authRouter, type AuthRouterOptions } from './modules/auth/auth.router.js';
 import { publicRouter, type PublicRouterOptions } from './modules/public/public.router.js';
-import { usersRouter } from './modules/users/users.router.js';
+import { adminRouter } from './modules/admin/admin.router.js';
 import { mountApiDocs } from './openapi/docs.js';
 import type { SsrHost } from './ssr/ssr.js';
 
@@ -89,6 +89,8 @@ export function createApp(options: AppOptions = {}): Express {
   );
   app.use(compression());
   app.use(cookieParser());
+  // Admin edits (rich text, section JSON) need more room than public forms.
+  app.use('/api/admin', express.json({ limit: '2mb' }));
   app.use('/api', express.json({ limit: '100kb' }), hpp());
 
   // CORS only for configured origins (the site itself is same-origin and needs none).
@@ -104,7 +106,7 @@ export function createApp(options: AppOptions = {}): Express {
   app.use('/api/admin/auth', authRouter({ loginMax: 5, loginWindowMs: 15 * 60 * 1000, ...options.auth }));
   const admin = express.Router();
   admin.use(requireAuth, requireCsrf);
-  admin.use('/users', usersRouter());
+  admin.use(adminRouter());
   app.use('/api/admin', (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();

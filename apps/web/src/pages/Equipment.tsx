@@ -1,7 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import type { EquipmentQuery } from '@app/shared';
 import { EquipmentCard } from '@/components/cards';
 import { categoryIcon } from '@/components/machinery/icons';
 import { Container, Section } from '@/components/primitives';
@@ -10,22 +9,7 @@ import { MediaImage, PageHeader, Reveal, SectionHeading } from '@/components/ui/
 import { Button } from '@/components/ui/button';
 import { useLang, useQueries } from '@/data/context';
 import { cn } from '@/lib/utils';
-
-/** URL search params → API query. Shared by the route loader (SSR) and the page so keys match. */
-export function parseEquipmentQuery(sp: URLSearchParams): EquipmentQuery {
-  const num = (k: string) => {
-    const v = Number(sp.get(k));
-    return sp.get(k) && Number.isFinite(v) && v >= 0 ? v : undefined;
-  };
-  const op = sp.get('operator');
-  return {
-    ...(sp.get('category') ? { category: sp.get('category')! } : {}),
-    ...(num('min') !== undefined ? { capacityMin: num('min') } : {}),
-    ...(num('max') !== undefined ? { capacityMax: num('max') } : {}),
-    ...(op === 'with' || op === 'without' ? { operator: op } : {}),
-    pageSize: 48,
-  };
-}
+import { parseEquipmentQuery } from './equipmentQuery';
 
 export function EquipmentCatalog() {
   const lang = useLang();

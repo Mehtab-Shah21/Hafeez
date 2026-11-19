@@ -27,7 +27,8 @@
     "db:migrate:pg": "node scripts/prisma-postgres.mjs && prisma migrate dev --schema prisma/postgres/schema.prisma",
     "db:deploy:pg": "node scripts/prisma-postgres.mjs && prisma migrate deploy --schema prisma/postgres/schema.prisma",
     "seed": "npm run build -w @app/shared && tsx prisma/seed.ts",
-    "dev:watch": "npm run build -w @app/shared && tsx watch --clear-screen=false --env-file=.env apps/server/src/index.ts"
+    "dev:watch": "npm run build -w @app/shared && tsx watch --clear-screen=false --env-file=.env apps/server/src/index.ts",
+    "photos:import": "npm run build -w @app/shared && tsx --env-file=.env apps/server/scripts/import-photos.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

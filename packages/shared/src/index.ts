@@ -7,3 +7,4 @@ export * from './schemas/auth.js';
 export * from './schemas/inquiry.js';
 export * from './api/envelope.js';
 export * from './api/public.js';
+export * from './schemas/admin.js';

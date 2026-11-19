@@ -244,3 +244,6 @@ export function Credits() {
     </>
   );
 }
+
+export const Privacy = () => <Legal pageKey="privacy" />;
+export const Terms = () => <Legal pageKey="terms" />;

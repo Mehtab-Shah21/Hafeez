@@ -3,16 +3,14 @@ import { lazy, Suspense } from 'react';
 import type { LoaderFunctionArgs, RouteObject } from 'react-router-dom';
 import { isLocale, type Locale } from '@app/shared';
 import type { Queries } from './data/queries';
-import { About } from './pages/About';
-import { Contact } from './pages/Contact';
-import { BlogIndex, BlogPost, Credits, Legal, ProjectDetail, ProjectsIndex } from './pages/Content';
-import { EquipmentCatalog, EquipmentDetail, parseEquipmentQuery } from './pages/Equipment';
-import { Home } from './pages/Home';
+import { parseEquipmentQuery } from './pages/equipmentQuery';
 import { LangLayout } from './pages/LangLayout';
-import { Logistics } from './pages/Logistics';
 import { NotFound } from './pages/NotFound';
 import { RouteError } from './pages/RouteError';
-import { SERVICE_EQUIPMENT, ServiceDetail, ServicesIndex } from './pages/Services';
+import { SERVICE_EQUIPMENT } from './pages/serviceEquipment';
+
+/** Route-level code splitting: each page is its own chunk (resolved before hydration in entry-client). */
+const lazyPage = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => () => load().then((m) => ({ Component: m[name] }));
 
 /** A 404 thrown from a loader becomes the route's errorElement and an HTTP 404 from SSR. */
 export const notFoundResponse = () => new Response('Not found', { status: 404, statusText: 'Not Found' });
@@ -81,7 +79,7 @@ export function createRoutes(qc: QueryClient, q: Queries): RouteObject[] {
         {
           index: true,
           id: 'home',
-          element: <Home />,
+          lazy: lazyPage(() => import('./pages/Home'), 'Home'),
           loader: all(
             page('home'),
             ensure((l) => q.services(l)),
@@ -92,11 +90,11 @@ export function createRoutes(qc: QueryClient, q: Queries): RouteObject[] {
             ensure((l) => q.faqs(l, 'general')),
           ),
         },
-        { path: 'about', element: <About />, loader: all(page('about'), page('home'), ensure((l) => q.team(l))) },
-        { path: 'services', element: <ServicesIndex />, loader: all(page('services'), ensure((l) => q.services(l))) },
+        { path: 'about', lazy: lazyPage(() => import('./pages/About'), 'About'), loader: all(page('about'), page('home'), ensure((l) => q.team(l))) },
+        { path: 'services', lazy: lazyPage(() => import('./pages/Services'), 'ServicesIndex'), loader: all(page('services'), ensure((l) => q.services(l))) },
         {
           path: 'services/:slug',
-          element: <ServiceDetail />,
+          lazy: lazyPage(() => import('./pages/Services'), 'ServiceDetail'),
           loader: all(
             ensureFound((l, s) => q.service(s, l)),
             ensure((l) => q.services(l)),
@@ -108,7 +106,7 @@ export function createRoutes(qc: QueryClient, q: Queries): RouteObject[] {
         },
         {
           path: 'equipment',
-          element: <EquipmentCatalog />,
+          lazy: lazyPage(() => import('./pages/Equipment'), 'EquipmentCatalog'),
           loader: all(
             page('equipment'),
             ensure((l) => q.equipmentCategories(l)),
@@ -117,7 +115,7 @@ export function createRoutes(qc: QueryClient, q: Queries): RouteObject[] {
         },
         {
           path: 'equipment/:slug',
-          element: <EquipmentDetail />,
+          lazy: lazyPage(() => import('./pages/Equipment'), 'EquipmentDetail'),
           loader: async (args) => {
             const lang = langOrThrow(args.params);
             const e = orNotFound(await qc.ensureQueryData(q.equipmentItem(args.params.slug ?? '', lang)));
@@ -127,17 +125,17 @@ export function createRoutes(qc: QueryClient, q: Queries): RouteObject[] {
         },
         {
           path: 'logistics',
-          element: <Logistics />,
+          lazy: lazyPage(() => import('./pages/Logistics'), 'Logistics'),
           loader: all(page('logistics'), ensure((l) => q.fleet(l)), ensure((l) => q.faqs(l, 'logistics')), ensure((l) => q.faqs(l, 'courier'))),
         },
-        { path: 'contact', element: <Contact />, loader: all(page('contact'), ensure((l) => q.services(l))) },
-        { path: 'projects', element: <ProjectsIndex />, loader: all(page('projects'), ensure((l) => q.projects(l)), ensure((l) => q.clients(l))) },
-        { path: 'projects/:slug', element: <ProjectDetail />, loader: all(ensureFound((l, s) => q.project(s, l))) },
-        { path: 'blog', element: <BlogIndex />, loader: all(page('blog'), ensure((l) => q.blog(l, 1))) },
-        { path: 'blog/:slug', element: <BlogPost />, loader: all(ensureFound((l, s) => q.blogPost(s, l))) },
-        { path: 'privacy', element: <Legal pageKey="privacy" />, loader: all(page('privacy')) },
-        { path: 'terms', element: <Legal pageKey="terms" />, loader: all(page('terms')) },
-        { path: 'credits', element: <Credits />, loader: all(ensure((l) => q.credits(l))) },
+        { path: 'contact', lazy: lazyPage(() => import('./pages/Contact'), 'Contact'), loader: all(page('contact'), ensure((l) => q.services(l))) },
+        { path: 'projects', lazy: lazyPage(() => import('./pages/Content'), 'ProjectsIndex'), loader: all(page('projects'), ensure((l) => q.projects(l)), ensure((l) => q.clients(l))) },
+        { path: 'projects/:slug', lazy: lazyPage(() => import('./pages/Content'), 'ProjectDetail'), loader: all(ensureFound((l, s) => q.project(s, l))) },
+        { path: 'blog', lazy: lazyPage(() => import('./pages/Content'), 'BlogIndex'), loader: all(page('blog'), ensure((l) => q.blog(l, 1))) },
+        { path: 'blog/:slug', lazy: lazyPage(() => import('./pages/Content'), 'BlogPost'), loader: all(ensureFound((l, s) => q.blogPost(s, l))) },
+        { path: 'privacy', lazy: lazyPage(() => import('./pages/Content'), 'Privacy'), loader: all(page('privacy')) },
+        { path: 'terms', lazy: lazyPage(() => import('./pages/Content'), 'Terms'), loader: all(page('terms')) },
+        { path: 'credits', lazy: lazyPage(() => import('./pages/Content'), 'Credits'), loader: all(ensure((l) => q.credits(l))) },
         // Unknown paths inside a language get the localized 404 page (SSR sends status 404).
         { path: '*', id: 'not-found', element: <NotFound />, handle: { notFound: true } },
       ],

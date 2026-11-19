@@ -10,14 +10,7 @@ import { Seo } from '@/components/seo/Seo';
 import { FaqJsonLd, FaqList, PageHeader, Reveal, SectionHeading } from '@/components/ui/blocks';
 import { Button } from '@/components/ui/button';
 import { useLang, useQueries } from '@/data/context';
-
-/** Which equipment categories relate to each service (for internal linking). */
-export const SERVICE_EQUIPMENT: Record<string, { category?: string; featured?: boolean }> = {
-  'equipment-rental': { featured: true },
-  'rigging-lifting': { category: 'cranes' },
-  'heavy-transport': { category: 'earthmoving' },
-  warehousing: { category: 'forklifts' },
-};
+import { SERVICE_EQUIPMENT } from './serviceEquipment';
 
 export function ServicesIndex() {
   const lang = useLang();

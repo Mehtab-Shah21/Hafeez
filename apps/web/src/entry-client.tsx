@@ -1,8 +1,19 @@
-import { hydrate, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query';
+import {
+  hydrate,
+  QueryClient,
+  QueryClientProvider,
+  type DehydratedState,
+} from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
-import { createBrowserRouter, RouterProvider, UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  matchRoutes,
+  RouterProvider,
+  UNSAFE_ErrorResponseImpl as ErrorResponseImpl,
+  type RouteObject,
+} from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { DEFAULT_LOCALE, isLocale } from '@app/shared';
 import { QueriesProvider } from './data/context';
@@ -19,7 +30,17 @@ interface SsrState {
   router: {
     loaderData: Record<string, unknown>;
     actionData: Record<string, unknown> | null;
-    errors: Record<string, { __type: string; status?: number; statusText?: string; data?: unknown; internal?: boolean; message?: string }> | null;
+    errors: Record<
+      string,
+      {
+        __type: string;
+        status?: number;
+        statusText?: string;
+        data?: unknown;
+        internal?: boolean;
+        message?: string;
+      }
+    > | null;
   };
 }
 
@@ -43,43 +64,65 @@ function reviveErrors(errors: SsrState['router']['errors']) {
 }
 
 const state = readState();
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } } });
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } },
+});
 if (state) hydrate(queryClient, state.rq);
 
 const queries = createQueries(httpDataSource);
 const seg = location.pathname.split('/')[1];
 const i18n = createI18n(isLocale(seg) ? seg : DEFAULT_LOCALE);
 const flags: RequestFlags = state?.flags ?? { showPreloader: false };
-const router = createBrowserRouter(createRoutes(queryClient, queries), {
-  ...(state
-    ? {
-        hydrationData: {
-          loaderData: state.router.loaderData,
-          actionData: state.router.actionData,
-          errors: reviveErrors(state.router.errors),
-        },
-      }
-    : {}),
-});
-
-const root = document.getElementById('root');
-if (root) {
-  // Public pages hydrate server HTML; the client-only admin shell has none, so it renders fresh.
-  const tree = (
-    <StrictMode>
-      <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <QueriesProvider queries={queries}>
-            <I18nextProvider i18n={i18n}>
-              <RequestProvider flags={flags}>
-                <RouterProvider router={router} />
-              </RequestProvider>
-            </I18nextProvider>
-          </QueriesProvider>
-        </QueryClientProvider>
-      </HelmetProvider>
-    </StrictMode>
+/**
+ * Lazy route modules must be loaded before hydrating, otherwise the first client render would not
+ * match the server HTML. Resolve the matched ones, then create the router.
+ */
+async function resolveLazy(routes: RouteObject[]) {
+  const matches = matchRoutes(routes, window.location) ?? [];
+  await Promise.all(
+    matches.map(async (m) => {
+      if (!m.route.lazy) return;
+      const mod = await m.route.lazy();
+      Object.assign(m.route, { ...mod, lazy: undefined });
+    }),
   );
-  if (state) hydrateRoot(root, tree);
-  else createRoot(root).render(tree);
+  return routes;
+}
+
+void resolveLazy(createRoutes(queryClient, queries)).then(mount);
+
+function mount(routes: RouteObject[]) {
+  const router = createBrowserRouter(routes, {
+    ...(state
+      ? {
+          hydrationData: {
+            loaderData: state.router.loaderData,
+            actionData: state.router.actionData,
+            errors: reviveErrors(state.router.errors),
+          },
+        }
+      : {}),
+  });
+
+  const root = document.getElementById('root');
+  if (root) {
+    // Public pages hydrate server HTML; the client-only admin shell has none, so it renders fresh.
+    const tree = (
+      <StrictMode>
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <QueriesProvider queries={queries}>
+              <I18nextProvider i18n={i18n}>
+                <RequestProvider flags={flags}>
+                  <RouterProvider router={router} />
+                </RequestProvider>
+              </I18nextProvider>
+            </QueriesProvider>
+          </QueryClientProvider>
+        </HelmetProvider>
+      </StrictMode>
+    );
+    if (state) hydrateRoot(root, tree);
+    else createRoot(root).render(tree);
+  }
 }
