@@ -120,7 +120,7 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Projects / Clients (index + case study)
   - [x] Blog index + post (Article JSON-LD, sanitised HTML)
   - [x] Legal (privacy, terms), credits page, 404
-- [x] **Step 6: Admin panel** (2026-11-20) at  (client-only, noindex, own lazy chunk)
+- [x] **Step 6: Admin panel** (2026-11-20) at `/admin` (client-only, noindex, own lazy chunk)
   - [x] Login + shell + RBAC-aware nav (Super Admin / Editor / SEO Manager), silent token refresh
   - [x] Dashboard (new inquiries, quotes 30d, latest inquiries, recent activity, SEO health)
   - [x] Company information (names/tagline/about EN+AR, logos, favicon, phones, WhatsApp, emails, branches + coords, hours, social, licence/TRN, default language), theme colours, navbar + footer
@@ -136,11 +136,11 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Live Google preview (desktop/mobile) + social share preview
   - [x] SEO score/checklist (keyword in title/H1/first paragraph/URL/description, lengths, H1, headings, alt coverage, internal links, word count, readability) with fix hints
   - [x] JSON-LD: automatic per page type + manual override field
-  - [ ] sitemap.xml + robots.txt serving (robots text editable now; serving in Step 7)
+  - [x] sitemap.xml (both languages, hreflang en-AE/ar-AE/x-default, lastmod; noindex + unpublished excluded) + robots.txt from the admin setting with the sitemap line appended
   - [x] Redirect manager (301/302/410, hit counts, cache invalidation) + 404 log with closest-path suggestions and one-click redirect
   - [x] Global SEO settings (title template, default OG image, Google/Bing verification, GA4/GTM/Pixel IDs, custom head/body code with warning)
   - [x] Bulk SEO table with inline title/description editing and re-score
-- [ ] **Step 7: SEO/technical pass**
+- [x] **Step 7: SEO/technical pass** (2026-11-20): dynamic `/sitemap.xml` + `/robots.txt`; JSON-LD per page type (Organization/LocalBusiness + AggregateRating, WebSite, BreadcrumbList, Service, Product/Offer, FAQPage, Article) + manual override; per-item OG image picker; favicon from settings (`apps/web/public/favicon.svg` fallback); latin font preloads in prod SSR; CSP allows GA4/GTM/Meta/Turnstile origins (scripts load only after consent); custom head/body code injected only after consent; optional Cloudflare Turnstile (`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`)
 - [ ] **Step 8: Performance and accessibility audit**
 
 ## 8. Current Status
@@ -192,9 +192,9 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 | 2026-11-20 | Equipment filters live in the URL (`?category&min&max&operator`) | Filtered views are shareable and server-rendered with the same query keys |
 | 2026-11-20 | Inquiry attachments stored in `uploads-private/` (never served), downloaded via the admin API | Customer files are not public |
 | 2026-11-20 | Cards without photos render a machinery illustration on a gradient | No broken/empty images while stock or client photos are pending |
-| 2026-11-20 | Admin CRUD = one server factory () + one client form renderer driven by per-module field configs validated by the shared Zod schemas | 12 modules with identical behaviour, validation and auditing; adding a module is a config entry |
+| 2026-11-20 | Admin CRUD = one server factory (`crudRouter`) + one client form renderer driven by per-module field configs validated by the shared Zod schemas | 12 modules with identical behaviour, validation and auditing; adding a module is a config entry |
 | 2026-11-20 | Section content edited as EN/AR JSON with draft/publish | Sections have different shapes per type; JSON keeps every section editable without a bespoke form each |
-| 2026-11-20 | Public pages are lazy route chunks (React Router ), matched chunks resolved before  | Home route JS dropped from 223 kB to ~176 kB gzip |
+| 2026-11-20 | Public pages are lazy route chunks (React Router `lazy`), matched chunks resolved before `hydrateRoot` | Home route JS dropped from 223 kB to ~176 kB gzip |
 | 2026-11-20 | Push to GitHub after every completed step (user instruction) | — |
 | 2026-11-19 | GateGuard (ECC plugin) exempted for `apps/**, packages/**, prisma/**, scripts/**, docs/**` via `.claude/settings.local.json` env | User approved; it was blocking every first file write. Destructive-shell checks stay on |
 
@@ -206,7 +206,8 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 - Watch mode restart loop: `tsx watch` / `node --watch` restart the server every 1–2 s on this Windows machine (cause not found), so `npm run dev` runs without watch. `npm run dev:watch` exists but may loop. Web/SSR code is reloaded by Vite regardless.
 - The styleguide (`apps/web/src/dev/`, route `/__styleguide`) is dev-only (tree-shaken in prod); delete it before launch.
 - UI chrome strings live in `apps/web/src/locales/ui.ts` until react-i18next is set up in Step 3.
-- Inquiry email notification (Nodemailer) and file upload are not wired yet (Step 5). `SeoDTO.ogImage` resolves from media in Step 6.
+- Inquiry email: wired (SMTP or Resend via `MAIL_DRIVER`); without mail settings it logs instead of sending.
+- Custom head/body code from the admin runs after consent, but inline `<script>` blocks are stopped by the CSP (`script-src 'self'` + listed vendors). Vendors that need inline snippets must be added to the CSP in `apps/server/src/app.ts`.
 - Prod CSP has no analytics/Maps script origins yet (Step 7, after cookie consent).
 - Postgres path (`db:migrate:pg`) is untested until a Postgres instance is available.
 - Seed testimonials, team members and company details are clearly marked placeholders (`[Name]`, `[COMPANY NAME]`, `+971 … 0000`).
@@ -234,7 +235,8 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
-- **2026-11-20** — Step 6 done: server  (crud factory, content, settings, media/sharp, inquiries/users/audit/dashboard, SEO with ),  (); web . Route-level code splitting (React Router , resolved before hydration). 35 tests pass; admin checked in browser (login, dashboard, service + SEO panel save, company settings save, equipment save).
+- **2026-11-20** — Step 7 done: `apps/server/src/modules/seo/seo-files.router.ts`, CSP update in `app.ts`, OG image resolution in `public.service.ts`/`mappers.ts`, Turnstile (server + `InquiryForm`), consent-gated custom code (`CookieConsent.tsx`), favicon, AggregateRating, font preloads (`ssr.ts`). Checked on the prod build: sitemap 68 URLs with alternates, robots, preloads, JSON-LD types per page.
+- **2026-11-20** — Step 6 done: server `apps/server/src/modules/admin/*` (crud factory, content, settings, media/sharp, inquiries/users/audit/dashboard, SEO with `lib/seo/{entities,score}.ts`), `apps/server/scripts/import-photos.ts` (`npm run photos:import`); web `apps/web/src/admin/*`. Route-level code splitting (React Router `lazy`, resolved before hydration). 35 tests pass; admin checked in browser (login, dashboard, service + SEO panel save, company settings save, equipment save).
 - **2026-11-20** — Step 5 done: pages (`apps/web/src/pages/{About,Services,Equipment,Logistics,Contact,Content}.tsx`, Home rebuilt), `components/{cards,Testimonials,logistics}.tsx`, `components/forms/InquiryForm.tsx`, `components/ui/blocks.tsx`, `components/machinery/icons.tsx`; server: team/credits endpoints, multipart inquiries (private `uploads-private/`), Nodemailer/Resend mailer, storage adapter (local/S3/Cloudinary), sanitize-html. 26 tests pass; every page SSR-checked (1 H1, title, JSON-LD, 404s).
 - **2026-11-20** — Step 4 done: `hero/{Hero,HeroScene,useHeroScroll,useScrollVideo}.tsx`, `config/hero.ts`, hero CSS keyframes; Vite HMR now shares the app port (`createSsrHost(httpServer)`). Verified pin + sequence at 1440 with `?motion=force` (the browser pane runs with reduced motion on).
 - **2026-11-20** — Step 3 done: `apps/web/src/locales/{en,ar}.ts`, `lib/{i18n,raf,motion,links}.ts`, `data/request.tsx`, `components/layout/*`, `components/motion/SmoothScroll.tsx`, LangLayout, entries, SSR preloader cookie. Checked desktop EN + mobile AR (menu, CTA bar).

@@ -40,7 +40,7 @@ export function toMedia(m: Media | null | undefined, lang: Locale): MediaDTO | n
   };
 }
 
-export function toSeo(row: SeoMeta | null | undefined): SeoDTO | null {
+export function toSeo(row: SeoMeta | null | undefined, ogImage: string | null = null): SeoDTO | null {
   if (!row) return null;
   return {
     title: row.title,
@@ -51,7 +51,7 @@ export function toSeo(row: SeoMeta | null | undefined): SeoDTO | null {
     robotsFollow: row.robotsFollow,
     ogTitle: row.ogTitle,
     ogDescription: row.ogDescription,
-    ogImage: null, // resolved from ogImageId once the media library lands (Step 6)
+    ogImage,
     twitterCard: row.twitterCard === 'summary' ? 'summary' : 'summary_large_image',
     jsonLdOverride: row.jsonLdOverride ?? null,
   };

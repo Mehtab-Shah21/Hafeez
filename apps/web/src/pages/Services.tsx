@@ -145,7 +145,7 @@ export function ServiceDetail() {
         <Container>
           <SectionHeading title={t('cta.requestQuote')} />
           <div className="mt-10">
-            <InquiryForm lang={lang} type="quote" services={services} defaultService={s.slug} />
+            <InquiryForm lang={lang} type="quote" services={services} defaultService={s.slug} turnstileSiteKey={settings.turnstileSiteKey} />
           </div>
         </Container>
       </Section>

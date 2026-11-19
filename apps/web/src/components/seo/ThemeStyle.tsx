@@ -8,12 +8,13 @@ const channels = (hex: string) => {
 };
 
 /** Applies the admin-edited theme colours as CSS variables, server-rendered so there is no flash. */
-export function ThemeStyle({ theme }: { theme: PublicSettingsDTO['theme'] }) {
+export function ThemeStyle({ theme, favicon }: { theme: PublicSettingsDTO['theme']; favicon?: string | null }) {
   const css = `:root{--navy:${channels(theme.navy)};--yellow:${channels(theme.yellow)};--blue:${channels(theme.blue)};--offwhite:${channels(theme.offwhite)};--ink:${channels(theme.ink)}}`;
   return (
     <Helmet>
       <style data-theme="">{css}</style>
       <meta name="theme-color" content={theme.navy} />
+      <link rel="icon" href={favicon || '/favicon.svg'} />
     </Helmet>
   );
 }

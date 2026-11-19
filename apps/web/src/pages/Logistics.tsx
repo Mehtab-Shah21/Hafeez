@@ -52,7 +52,7 @@ export function Logistics() {
         <Container>
           <SectionHeading title={t('sections.booking')} />
           <div className="mt-10">
-            <InquiryForm lang={lang} type="booking" booking />
+            <InquiryForm lang={lang} type="booking" booking turnstileSiteKey={settings.turnstileSiteKey} />
           </div>
         </Container>
       </Section>

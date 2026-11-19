@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { hasPermission, type Locale, type RoleKey, type SeoEntityType } from '@app/shared';
 import { cn } from '@/lib/utils';
 import { api, errorText } from '../api';
+import { MediaPicker } from '../fields';
 import { Badge, Btn, Card, DataTable, Field, Input, Notice, PageTitle, Select, Textarea } from '../ui';
 
 interface Check {
@@ -156,6 +157,9 @@ export function SeoPanel({ type, id, role }: { type: SeoEntityType; id: string; 
           </Field>
           <Field label="Open Graph description">
             <Textarea rows={2} value={v.ogDescription} onChange={(e) => set('ogDescription', e.target.value)} />
+          </Field>
+          <Field label="Open Graph image (1200×630)" hint="Falls back to the default share image from Global SEO.">
+            <MediaPicker value={v.ogImageId ? [v.ogImageId] : []} onChange={(ids) => set('ogImageId', ids[0] ?? null)} />
           </Field>
           <Field label="Twitter card">
             <Select value={v.twitterCard} onChange={(e) => set('twitterCard', e.target.value as SeoMetaRow['twitterCard'])}>

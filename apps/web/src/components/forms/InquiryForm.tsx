@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -33,6 +33,8 @@ interface Props {
   defaultService?: string;
   defaultEquipment?: string;
   booking?: boolean;
+  /** From settings.turnstileSiteKey; empty disables the widget. */
+  turnstileSiteKey?: string;
 }
 
 const field = 'mt-2 h-12 w-full rounded-xl border border-mist bg-white px-4 text-ink placeholder:text-steel/70 focus:border-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 aria-[invalid=true]:border-red-600';
@@ -58,12 +60,23 @@ function Field({ id, label, error, hint, children, className }: { id: string; la
   );
 }
 
-export function InquiryForm({ lang, type, services = [], defaultService = '', defaultEquipment = '', booking = false }: Props) {
+export function InquiryForm({ lang, type, services = [], defaultService = '', defaultEquipment = '', booking = false, turnstileSiteKey = '' }: Props) {
   const { t } = useTranslation();
   const uid = useId();
   const id = (n: string) => `${uid}-${n}`;
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<{ kind: 'idle' | 'ok' | 'error'; ref?: string }>({ kind: 'idle' });
+  const formRef = useRef<HTMLFormElement>(null);
+  const siteKey = turnstileSiteKey;
+  // Turnstile widget (only when a site key is configured): the script auto-renders .cf-turnstile.
+  useEffect(() => {
+    if (!siteKey || document.querySelector('script[data-turnstile]')) return;
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    s.async = true;
+    s.dataset.turnstile = '1';
+    document.head.appendChild(s);
+  }, [siteKey]);
 
   const {
     register,
@@ -95,6 +108,7 @@ export function InquiryForm({ lang, type, services = [], defaultService = '', de
       equipmentSlug: v.equipmentSlug ?? '',
       message: v.message ?? '',
       website: v.website ?? '',
+      ...(siteKey ? { 'cf-turnstile-response': (formRef.current?.querySelector<HTMLInputElement>('[name="cf-turnstile-response"]')?.value ?? '') } : {}),
       ...(booking
         ? {
             booking: {
@@ -144,7 +158,7 @@ export function InquiryForm({ lang, type, services = [], defaultService = '', de
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-5 rounded-3xl bg-white p-6 shadow-card md:grid-cols-2 md:p-10">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="grid gap-5 rounded-3xl bg-white p-6 shadow-card md:grid-cols-2 md:p-10">
       <Field id={id('name')} label={t('form.name')} error={msg(errors.name)}>
         <input id={id('name')} autoComplete="name" className={field} {...register('name')} {...aria('name')} />
       </Field>
@@ -254,6 +268,8 @@ export function InquiryForm({ lang, type, services = [], defaultService = '', de
           <input tabIndex={-1} autoComplete="off" {...register('website')} />
         </label>
       </div>
+
+      {siteKey && <div className="cf-turnstile md:col-span-2" data-sitekey={siteKey} data-language={lang} />}
 
       <div className="flex flex-wrap items-center gap-4 md:col-span-2">
         <Button type="submit" size="lg" disabled={isSubmitting}>

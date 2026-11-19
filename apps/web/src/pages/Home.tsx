@@ -53,7 +53,7 @@ export function Home() {
         path=""
         seo={page?.seo ?? null}
         fallbackTitle={page?.title ?? settings.company.name}
-        jsonLd={[organizationLd(settings, lang), websiteLd(settings, lang)]}
+        jsonLd={[organizationLd(settings, lang, testimonials.map((x) => x.rating)), websiteLd(settings, lang)]}
       />
       <FaqJsonLd items={faqs} />
 

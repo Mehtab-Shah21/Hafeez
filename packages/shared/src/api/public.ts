@@ -100,7 +100,10 @@ export interface PublicSettingsDTO {
     badges: string[];
   };
   seo: { titleTemplate: string; defaultOgImage: string | null; googleVerification: string; bingVerification: string };
-  analytics: { ga4Id: string; gtmId: string; metaPixelId: string };
+  analytics: { ga4Id: string; gtmId: string; metaPixelId: string; customHead: string; customBody: string };
+  /** Cloudflare Turnstile site key when bot protection is enabled (TURNSTILE_SITE_KEY), else empty. */
+  turnstileSiteKey: string;
+  favicon: string | null;
 }
 
 export interface SectionDTO {

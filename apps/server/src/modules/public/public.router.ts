@@ -16,7 +16,7 @@ import {
   type TrackingDTO,
 } from '@app/shared';
 import { env } from '../../config/env.js';
-import { notFound } from '../../lib/errors.js';
+import { AppError, notFound } from '../../lib/errors.js';
 import { inquiryEmail, sendMail } from '../../lib/mailer.js';
 import { stripTags } from '../../lib/sanitize.js';
 import { privateUploadsDir } from '../../lib/storage.js';
@@ -187,12 +187,25 @@ export function publicRouter({ inquiryMax, inquiryWindowMs }: PublicRouterOption
     next();
   };
 
+  // Optional Cloudflare Turnstile: enforced only when TURNSTILE_SECRET is set.
+  const turnstile: RequestHandler = (req, _res, next) => {
+    const secret = process.env.TURNSTILE_SECRET;
+    if (!secret) return next();
+    const token = (req.body as Record<string, unknown>)['cf-turnstile-response'];
+    if (typeof token !== 'string' || !token) return next(new AppError(400, ERROR_CODES.VALIDATION, 'Please complete the security check'));
+    fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: new URLSearchParams({ secret, response: token, remoteip: req.ip ?? '' }) })
+      .then((r) => r.json() as Promise<{ success: boolean }>)
+      .then((v) => next(v.success ? undefined : new AppError(400, ERROR_CODES.VALIDATION, 'Security check failed, please try again')))
+      .catch(next);
+  };
+
   r.post(
     '/inquiries',
     inquiryLimiter,
     upload.single('file'),
     parseMultipart,
     honeypot,
+    turnstile,
     validate(inquiryCreateSchema),
     asyncHandler(async (req, res) => {
       const input = req.body as InquiryCreateInput;

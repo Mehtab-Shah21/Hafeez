@@ -46,12 +46,37 @@ function loadAnalytics(a: PublicSettingsDTO['analytics']) {
     add(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(a.ga4Id)}`);
   }
   if (a.metaPixelId) add('https://connect.facebook.net/en_US/fbevents.js');
+  injectCustom(a.customHead, document.head);
+  injectCustom(a.customBody, document.body);
+}
+
+/**
+ * Admin "custom head/body code", applied after consent. Markup is parsed and re-created so <script src>
+ * tags execute; inline scripts are subject to the CSP (script-src self + listed vendors) and will be
+ * blocked unless the policy is extended, which the admin screen warns about.
+ */
+function injectCustom(html: string, target: HTMLElement) {
+  if (!html.trim() || target.querySelector('[data-custom-code]')) return;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const marker = document.createElement('meta');
+  marker.dataset.customCode = '1';
+  target.appendChild(marker);
+  for (const node of [...tpl.content.childNodes]) {
+    if (node instanceof HTMLScriptElement) {
+      const s = document.createElement('script');
+      for (const attr of [...node.attributes]) s.setAttribute(attr.name, attr.value);
+      s.text = node.text;
+      target.appendChild(s);
+    } else target.appendChild(node);
+  }
 }
 
 export function CookieConsent({ settings, lang }: { settings: PublicSettingsDTO; lang: Locale }) {
   const { t } = useTranslation();
   const [consent, setConsent] = useState<Consent | null | 'unknown'>('unknown');
-  const hasAnalytics = Boolean(settings.analytics.ga4Id || settings.analytics.gtmId || settings.analytics.metaPixelId);
+  const a = settings.analytics;
+  const hasAnalytics = Boolean(a.ga4Id || a.gtmId || a.metaPixelId || a.customHead.trim() || a.customBody.trim());
 
   useEffect(() => setConsent(read()), []);
   useEffect(() => {

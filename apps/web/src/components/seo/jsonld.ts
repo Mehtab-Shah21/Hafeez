@@ -1,7 +1,10 @@
 import { EMIRATES, LOCALE_TAGS, type Locale, type PublicSettingsDTO } from '@app/shared';
 
-/** Organization + LocalBusiness for the head office, with every branch as a department. */
-export function organizationLd(s: PublicSettingsDTO, lang: Locale) {
+/**
+ * Organization + LocalBusiness for the head office, with every branch as a department.
+ * `ratings` (from testimonials) adds AggregateRating; omitted when there are none.
+ */
+export function organizationLd(s: PublicSettingsDTO, lang: Locale, ratings: number[] = []) {
   const base = s.siteUrl.replace(/\/$/, '');
   const head = s.company.branches.find((b) => b.isHeadOffice) ?? s.company.branches[0];
   const emirateName = (key: string) => EMIRATES.find((e) => e.key === key)?.en ?? key;
@@ -31,6 +34,9 @@ export function organizationLd(s: PublicSettingsDTO, lang: Locale) {
           address: address(head),
           geo: { '@type': 'GeoCoordinates', latitude: head.lat, longitude: head.lng },
         }
+      : {}),
+    ...(ratings.length
+      ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1), reviewCount: ratings.length, bestRating: 5 } }
       : {}),
     department: s.company.branches
       .filter((b) => b !== head)

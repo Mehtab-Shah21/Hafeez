@@ -50,7 +50,7 @@ export function Contact() {
 
       <Section tone="light">
         <Container className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
-          <InquiryForm lang={lang} type={type} services={services} defaultService={sp.get('service') ?? ''} defaultEquipment={sp.get('equipment') ?? ''} />
+          <InquiryForm lang={lang} type={type} turnstileSiteKey={settings.turnstileSiteKey} services={services} defaultService={sp.get('service') ?? ''} defaultEquipment={sp.get('equipment') ?? ''} />
           <aside className="space-y-6">
             <div className="rounded-3xl bg-white p-6 shadow-card">
               <h2 className="font-semibold text-navy">{t('footer.contact')}</h2>

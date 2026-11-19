@@ -16,6 +16,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { redirects } from './middleware/redirects.js';
 import { authRouter, type AuthRouterOptions } from './modules/auth/auth.router.js';
 import { publicRouter, type PublicRouterOptions } from './modules/public/public.router.js';
+import { seoFilesRouter } from './modules/seo/seo-files.router.js';
 import { adminRouter } from './modules/admin/admin.router.js';
 import { mountApiDocs } from './openapi/docs.js';
 import type { SsrHost } from './ssr/ssr.js';
@@ -27,6 +28,10 @@ export interface AppOptions {
   ssr?: SsrHost;
 }
 
+/** Third-party origins used only after cookie consent (analytics) or for bot protection (Turnstile). */
+const THIRD_PARTY_SCRIPTS = ['https://www.googletagmanager.com', 'https://www.google-analytics.com', 'https://connect.facebook.net', 'https://challenges.cloudflare.com'];
+const THIRD_PARTY_CONNECT = ['https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://www.googletagmanager.com', 'https://www.facebook.com', 'https://challenges.cloudflare.com'];
+
 /**
  * Content-Security-Policy. Scripts only from our origin (SSR state is a non-executable JSON tag).
  * Inline styles are allowed for the server-rendered theme variables. Dev adds what Vite HMR needs.
@@ -36,12 +41,12 @@ const csp = () => ({
   useDefaults: false,
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: isProd ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    scriptSrc: ["'self'", ...THIRD_PARTY_SCRIPTS, ...(isProd ? [] : ["'unsafe-inline'", "'unsafe-eval'"])],
     styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", 'data:', 'blob:'],
+    imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
     fontSrc: ["'self'", 'data:'],
-    connectSrc: isProd ? ["'self'"] : ["'self'", 'ws:', 'wss:'],
-    frameSrc: ["'self'", 'https://www.google.com', 'https://maps.google.com'],
+    connectSrc: ["'self'", ...THIRD_PARTY_CONNECT, ...(isProd ? [] : ['ws:', 'wss:'])],
+    frameSrc: ["'self'", 'https://www.google.com', 'https://maps.google.com', 'https://challenges.cloudflare.com', 'https://www.googletagmanager.com'],
     frameAncestors: ["'none'"],
     formAction: ["'self'"],
     baseUri: ["'self'"],
@@ -115,6 +120,7 @@ export function createApp(options: AppOptions = {}): Express {
   app.use('/api', notFoundHandler);
 
   // ---- Pages
+  app.use(seoFilesRouter());
   app.use(redirects);
   if (options.ssr) {
     for (const mw of options.ssr.assets) app.use(mw);

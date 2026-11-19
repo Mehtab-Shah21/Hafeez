@@ -27,7 +27,7 @@ export function LangLayout() {
 
   return (
     <>
-      <ThemeStyle theme={settings.theme} />
+      <ThemeStyle theme={settings.theme} favicon={settings.favicon} />
       <Preloader />
       <SmoothScroll />
       <a href="#main" className="skip-link">

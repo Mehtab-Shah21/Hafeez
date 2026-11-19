@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import type { Server as HttpServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -70,7 +70,13 @@ export async function createSsrHost(httpServer?: HttpServer): Promise<SsrHost> {
 
   // Prod: prebuilt client assets + server bundle. Hashed assets are immutable for a year.
   const clientDir = resolve(webDir, 'dist/client');
-  const template = await readFile(resolve(clientDir, 'index.html'), 'utf8');
+  // Preload the two latin fonts used above the fold (hashed names are discovered at start-up).
+  const assetNames = await readdir(resolve(clientDir, 'assets')).catch(() => [] as string[]);
+  const preloads = assetNames
+    .filter((n) => /^(anton-latin-400-normal|inter-latin-wght-normal)-.*.woff2$/.test(n))
+    .map((n) => `<link rel="preload" href="/assets/${n}" as="font" type="font/woff2" crossorigin>`)
+    .join('');
+  const template = (await readFile(resolve(clientDir, 'index.html'), 'utf8')).replace('<!--app-head-->', `${preloads}<!--app-head-->`);
   const entry = pathToFileURL(resolve(webDir, 'dist/server/entry-server.js')).href;
   const { render } = (await import(entry)) as { render: SsrRender };
 

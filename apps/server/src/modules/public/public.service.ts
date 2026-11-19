@@ -39,7 +39,10 @@ async function settingValue<T>(key: string): Promise<T> {
 
 async function seoFor(entityType: SeoEntityType, ids: string[], lang: Locale) {
   const rows = await prisma.seoMeta.findMany({ where: { entityType, entityId: { in: ids }, locale: lang } });
-  return new Map(rows.map((r) => [r.entityId, toSeo(r)]));
+  const ogIds = rows.map((r) => r.ogImageId).filter((x): x is string => !!x);
+  const media = ogIds.length ? await prisma.media.findMany({ where: { id: { in: ogIds } } }) : [];
+  const og = new Map(media.map((m) => [m.id, toMedia(m, lang)?.src ?? null]));
+  return new Map(rows.map((r) => [r.entityId, toSeo(r, r.ogImageId ? og.get(r.ogImageId) ?? null : null)]));
 }
 
 async function mediaById(id: string | null, lang: Locale) {
@@ -133,8 +136,10 @@ export const publicService: PublicDataSource = {
         googleVerification: seo.googleVerification,
         bingVerification: seo.bingVerification,
       },
-      // Only public IDs; custom head/body scripts are injected server-side, never sent as data.
-      analytics: { ga4Id: analytics.ga4Id, gtmId: analytics.gtmId, metaPixelId: analytics.metaPixelId },
+      // Tracking IDs and custom code are only executed client-side after cookie consent.
+      analytics: { ga4Id: analytics.ga4Id, gtmId: analytics.gtmId, metaPixelId: analytics.metaPixelId, customHead: analytics.customHead, customBody: analytics.customBody },
+      turnstileSiteKey: process.env.TURNSTILE_SITE_KEY ?? '',
+      favicon: (await mediaById(company.faviconId, lang))?.src ?? null,
     };
     return dto;
   },
