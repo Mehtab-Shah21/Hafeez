@@ -21,8 +21,9 @@ describe('public read API', () => {
     expect(en.body.ok).toBe(true);
     expect(en.body.data.navbar.items[0].label).toBe('Services');
     expect(ar.body.data.navbar.items[0].label).toBe('الخدمات');
-    // Admin-only analytics fields never leak.
-    expect(en.body.data.analytics).not.toHaveProperty('customHead');
+    // Tracking config is public (it only runs client-side after consent); secrets never are.
+    expect(typeof en.body.data.analytics.customHead).toBe('string');
+    expect(JSON.stringify(en.body.data)).not.toMatch(/passwordHash|TURNSTILE_SECRET|JWT_/);
   });
 
   it('sends ETag and cache headers, and answers 304 on revalidation', async () => {
