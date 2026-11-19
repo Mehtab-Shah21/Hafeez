@@ -120,6 +120,64 @@
   }
 }
 
+/* Hero intro (CSS, starts at first paint): headline lines rise out of a clip mask, the rest fades up.
+   Ends by 1.8 s and holds the final state. Reduced motion: fades only (block below). */
+@keyframes hero-rise {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes hero-haze {
+  0%,
+  100% {
+    opacity: 0.04;
+  }
+  50% {
+    opacity: 0.09;
+  }
+}
+.hero-line {
+  animation: hero-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-fade-up {
+  animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-haze {
+  animation: hero-haze 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-line {
+    animation: none;
+  }
+  .hero-fade-up {
+    animation: hero-fade-in 0.4s ease-out both;
+  }
+  .hero-haze {
+    animation: none;
+  }
+}
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Preloader: forks lift (transform), then the overlay fades out. Total under 1 s, no JS needed. */
 @keyframes preloader-lift {
   0%,

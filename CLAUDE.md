@@ -109,7 +109,7 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Status codes: 404 (unknown/invalid-lang routes, logged to NotFoundLog), 301/302/410 from DB redirects, `/` → 302 by Accept-Language
   - [x] Swagger `/api/docs` (+ `/api/docs.json`)
 - [x] **Step 3: Layout, navbar, footer** (2026-11-20): react-i18next per request, glass pill navbar (hide on scroll via shared rAF loop) + EN/AR switcher + Radix mobile menu, footer with quote band/wordmark/branches/hours/licence/TRN, WhatsApp FAB, mobile CTA bar, cookie consent (analytics only after consent), CSS-only preloader (session cookie `pl`), Lenis smooth scroll
-- [ ] **Step 4: Hero animation** (vector layers, intro timeline, pinned scroll scrub, video mode, device tiers, reduced motion)
+- [x] **Step 4: Hero animation** (2026-11-20): layered SVG scene (`apps/web/src/hero/HeroScene.tsx`), CSS intro (clip-mask line rise, ≤1.8 s, no JS), GSAP ScrollTrigger pinned scrub (hoist → travel → load → truck departs → pull back, parallax on high tier), scroll-scrubbed video mode (eased currentTime in the shared rAF loop), device tiers, reduced motion = static frame + fades. Swap point `apps/web/src/config/hero.ts`; QA override `?motion=force`
 - [ ] **Step 5: Pages**
   - [ ] Home
   - [ ] About
@@ -194,6 +194,8 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 | 2026-11-20 | Git author for this repo = `Mehtab-Shah21 <Mehtab-Shah21@users.noreply.github.com>` (repo-local config); `.claude/settings.local.json` git-ignored | Keeps the user's personal email out of public commits; local hook settings are machine-specific |
 | 2026-11-20 | Preloader is pure CSS, server-rendered only when session cookie `pl` is absent | Works without JS, never hides SSR content from crawlers, no inline script for sessionStorage checks |
 | 2026-11-20 | Language switch uses a full document load (`reloadDocument`) | Re-creates i18n, dir and SSR head cleanly in the other language |
+| 2026-11-20 | Hero intro in CSS keyframes, scroll storytelling in GSAP (lazy) | Intro starts at first paint without JS and never flashes; GSAP stays out of the critical path |
+| 2026-11-20 | RTL hero mirrors the whole SVG (`rtl:-scale-x-100`) | Movement direction mirrors automatically; no per-tween direction maths |
 | 2026-11-20 | Push to GitHub after every completed step (user instruction) | — |
 | 2026-11-19 | GateGuard (ECC plugin) exempted for `apps/**, packages/**, prisma/**, scripts/**, docs/**` via `.claude/settings.local.json` env | User approved; it was blocking every first file write. Destructive-shell checks stay on |
 
@@ -211,6 +213,8 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 - Inter's woff2 ships all subsets (latin-ext, cyrillic, greek, vietnamese); browsers only download what a page uses (unicode-range), but trim the imports in Step 8 if Lighthouse flags it.
 
 ## 12. Assets to Replace
+- Hero: `apps/web/src/hero/HeroScene.tsx` is a placeholder vector scene. Replace with a rendered video (`config/hero.ts` → `video.src/srcMobile/poster`, or admin Hero manager) and/or a real port/skyline photo (`backgroundImage`).
+- Logo mark: placeholder SVG in `apps/web/src/components/layout/Logo.tsx` until a logo is uploaded in the admin.
 _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos will be listed here one by one (file, licence, author, the shot to take instead). Expected:_
 - Hero video (MP4/WebM 1080p + 720p) + poster, or real PNG/WebP layers → `apps/web/src/config/hero.ts` / admin Hero manager.
 - Company logos (light/dark), favicon, OG default image.
@@ -230,6 +234,7 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
+- **2026-11-20** — Step 4 done: `hero/{Hero,HeroScene,useHeroScroll,useScrollVideo}.tsx`, `config/hero.ts`, hero CSS keyframes; Vite HMR now shares the app port (`createSsrHost(httpServer)`). Verified pin + sequence at 1440 with `?motion=force` (the browser pane runs with reduced motion on).
 - **2026-11-20** — Step 3 done: `apps/web/src/locales/{en,ar}.ts`, `lib/{i18n,raf,motion,links}.ts`, `data/request.tsx`, `components/layout/*`, `components/motion/SmoothScroll.tsx`, LangLayout, entries, SSR preloader cookie. Checked desktop EN + mobile AR (menu, CTA bar).
 - **2026-11-20** — Step 2 built, verified and pushed. Pushed Step 1 first (commit `991ed98`). Files: `packages/shared/src/api/public.ts` (DTOs, PublicDataSource, SSR contract, LOCALE_TAGS), `apps/server/src/{app.ts,index.ts}`, `modules/public/*`, `middleware/redirects.ts`, `ssr/ssr.ts`, `openapi/docs.ts`, `test/public.test.ts`, `apps/web/src/{entry-client,entry-server,routes}.tsx`, `data/*`, `lib/api.ts`, `pages/*`, `components/seo/*`, `locales/ui.ts`, vite/postcss/tailwind config tweaks, `.claude/launch.json`. Left: Step 3 onward.
 - **2026-11-19** — Step 1 built and verified. Files: root config (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.env.example`, `.gitignore`, `.prettierrc`), `packages/shared/src/**` (constants, Zod schemas, envelope), `prisma/schema.prisma` + `migrations/` + `seed.ts` + `seed-data/*`, `scripts/prisma-postgres.mjs`, `apps/server/src/**` (env, prisma, logger, errors, middleware auth/rbac/csrf/validate/errorHandler, modules auth + users, `createApp`), `apps/server/test/**`, `apps/web/**` (vite, tailwind, globals.css, Button, primitives, dev styleguide), `.claude/launch.json`. `git init` done, nothing committed. Left: Step 2 onward.

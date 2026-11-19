@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import type { Server as HttpServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import express, { type RequestHandler } from 'express';
@@ -39,14 +40,15 @@ const adminShell = (template: string) =>
     .replace('<!--app-html-->', '')
     .replace('<!--app-state-->', '');
 
-export async function createSsrHost(): Promise<SsrHost> {
+export async function createSsrHost(httpServer?: HttpServer): Promise<SsrHost> {
   if (!isProd) {
     // Dev: Vite in middleware mode gives HMR and on-the-fly SSR module loading.
     const { createServer } = await import('vite');
     const vite = await createServer({
       root: webDir,
       appType: 'custom',
-      server: { middlewareMode: true },
+      // HMR websocket shares the app port (a separate port is often blocked by proxies/sandboxes).
+      server: { middlewareMode: true, hmr: httpServer ? { server: httpServer } : true },
       logLevel: 'warn',
     });
     const handler: RequestHandler = (req, res, next) => {

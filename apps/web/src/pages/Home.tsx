@@ -3,13 +3,9 @@ import { Link } from 'react-router-dom';
 import { Card, Container, Heading, Section } from '@/components/primitives';
 import { Seo } from '@/components/seo/Seo';
 import { organizationLd, websiteLd } from '@/components/seo/jsonld';
-import { Button } from '@/components/ui/button';
+import { Hero } from '@/hero/Hero';
 import { useLang, useQueries } from '@/data/context';
 import { useTranslation } from 'react-i18next';
-
-interface StatsContent {
-  items: { value: number; suffix: string; label: string }[];
-}
 
 /**
  * Step 2 version of Home: proves SSR end to end (DB → service → HTML with H1, copy and full head).
@@ -22,8 +18,6 @@ export function Home() {
   const { data: settings } = useSuspenseQuery(q.settings(lang));
   const { data: page } = useSuspenseQuery(q.page('home', lang));
   const { data: services } = useSuspenseQuery(q.services(lang));
-  const hero = settings.hero;
-  const stats = page?.sections.find((s) => s.type === 'stats')?.content as StatsContent | undefined;
 
   return (
     <>
@@ -36,40 +30,7 @@ export function Home() {
         jsonLd={[organizationLd(settings, lang), websiteLd(settings, lang)]}
       />
 
-      <Section tone="navy" blueprint>
-        <Container>
-          <p className="text-sm font-medium tracking-wide text-yellow">{hero.eyebrow}</p>
-          <Heading level={1} className="mt-6 max-w-4xl">
-            {hero.lines.map((line) => (
-              <span key={line} className="block">
-                {line}
-              </span>
-            ))}
-          </Heading>
-          <p className="mt-6 max-w-prose text-lg text-offwhite/80">{hero.subtitle}</p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to={`/${lang}${settings.navbar.ctaHref}`}>{hero.primaryCta}</Link>
-            </Button>
-            <Button asChild variant="glass" size="lg" chevron={false}>
-              <Link to={`/${lang}/equipment`}>{hero.secondaryCta}</Link>
-            </Button>
-          </div>
-          {stats && (
-            <dl className="mt-16 grid grid-cols-2 gap-6 border-t border-white/10 pt-10 md:grid-cols-4">
-              {stats.items.map((s) => (
-                <div key={s.label}>
-                  <dt className="text-sm text-offwhite/70">{s.label}</dt>
-                  <dd dir="ltr" className="tabular mt-2 text-start font-display text-display-md text-yellow rtl:text-end rtl:font-bold">
-                    {s.value.toLocaleString('en-US')}
-                    {s.suffix}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </Container>
-      </Section>
+      <Hero settings={settings} lang={lang} />
 
       <Section tone="light">
         <Container>

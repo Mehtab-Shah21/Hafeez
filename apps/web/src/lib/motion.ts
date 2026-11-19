@@ -5,6 +5,8 @@ export function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // QA override: ?motion=force previews animations on machines with reduced motion switched on.
+    if (new URLSearchParams(location.search).get('motion') === 'force') return;
     setReduced(mq.matches);
     const on = (e: MediaQueryListEvent) => setReduced(e.matches);
     mq.addEventListener('change', on);

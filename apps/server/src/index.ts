@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
@@ -5,9 +6,11 @@ import { prisma } from './lib/prisma.js';
 import { createSsrHost } from './ssr/ssr.js';
 
 async function main() {
-  const ssr = await createSsrHost();
+  const server = createServer();
+  const ssr = await createSsrHost(server);
   const app = createApp({ ssr });
-  const server = app.listen(env.PORT, () => {
+  server.on('request', app);
+  server.listen(env.PORT, () => {
     logger.info(`Server listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
   });
 
