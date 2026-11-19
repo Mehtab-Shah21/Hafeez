@@ -3,7 +3,11 @@ import { StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { createBrowserRouter, RouterProvider, UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from 'react-router-dom';
+import { I18nextProvider } from 'react-i18next';
+import { DEFAULT_LOCALE, isLocale } from '@app/shared';
 import { QueriesProvider } from './data/context';
+import { RequestProvider, type RequestFlags } from './data/request';
+import { createI18n } from './lib/i18n';
 import { createQueries } from './data/queries';
 import { httpDataSource } from './lib/api';
 import { createRoutes } from './routes';
@@ -11,6 +15,7 @@ import './styles/globals.css';
 
 interface SsrState {
   rq: DehydratedState;
+  flags: RequestFlags;
   router: {
     loaderData: Record<string, unknown>;
     actionData: Record<string, unknown> | null;
@@ -42,6 +47,9 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60
 if (state) hydrate(queryClient, state.rq);
 
 const queries = createQueries(httpDataSource);
+const seg = location.pathname.split('/')[1];
+const i18n = createI18n(isLocale(seg) ? seg : DEFAULT_LOCALE);
+const flags: RequestFlags = state?.flags ?? { showPreloader: false };
 const router = createBrowserRouter(createRoutes(queryClient, queries), {
   ...(state
     ? {
@@ -62,7 +70,11 @@ if (root) {
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <QueriesProvider queries={queries}>
-            <RouterProvider router={router} />
+            <I18nextProvider i18n={i18n}>
+              <RequestProvider flags={flags}>
+                <RouterProvider router={router} />
+              </RequestProvider>
+            </I18nextProvider>
           </QueriesProvider>
         </QueryClientProvider>
       </HelmetProvider>

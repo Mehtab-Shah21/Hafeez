@@ -93,7 +93,10 @@ export async function createSsrHost(): Promise<SsrHost> {
 }
 
 async function respond(render: SsrRender, template: string, req: express.Request, res: express.Response) {
-  const result = await render({ url: req.originalUrl, data: publicService, siteUrl: env.PUBLIC_SITE_URL });
+  // First HTML view of the browser session shows the preloader; the session cookie skips it afterwards.
+  const showPreloader = req.cookies?.pl !== '1';
+  const result = await render({ url: req.originalUrl, data: publicService, siteUrl: env.PUBLIC_SITE_URL, showPreloader });
+  if (showPreloader) res.cookie('pl', '1', { httpOnly: true, sameSite: 'lax', secure: isProd, path: '/' });
   if (result.type === 'redirect') {
     res.redirect(result.status, result.location);
     return;

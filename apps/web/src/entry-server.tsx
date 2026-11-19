@@ -6,7 +6,10 @@ import { isRouteErrorResponse } from 'react-router-dom';
 import { createStaticHandler, createStaticRouter, StaticRouterProvider } from 'react-router-dom/server';
 import { Writable } from 'node:stream';
 import { dirFor, DEFAULT_LOCALE, isLocale, LOCALE_TAGS, type SsrRender, type SsrResult } from '@app/shared';
+import { I18nextProvider } from 'react-i18next';
 import { QueriesProvider } from './data/context';
+import { RequestProvider } from './data/request';
+import { createI18n } from './lib/i18n';
 import { createQueries } from './data/queries';
 import { createRoutes } from './routes';
 import './styles/globals.css';
@@ -29,7 +32,7 @@ function serializeErrors(errors: Record<string, unknown> | null) {
  * Renders one public URL to HTML. Called by the Express SSR host with an in-process data source.
  * Waits for `onAllReady` so crawlers always receive complete HTML (title, H1, copy, JSON-LD).
  */
-export const render: SsrRender = async ({ url, data, siteUrl }) => {
+export const render: SsrRender = async ({ url, data, siteUrl, showPreloader }) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: false } } });
   const queries = createQueries(data);
   const routes = createRoutes(queryClient, queries);
@@ -52,6 +55,8 @@ export const render: SsrRender = async ({ url, data, siteUrl }) => {
 
   const router = createStaticRouter(handler.dataRoutes, context);
   const helmetContext: { helmet?: HelmetServerState } = {};
+  const i18n = createI18n(lang);
+  const flags = { showPreloader };
 
   const appHtml = await new Promise<string>((resolve, reject) => {
     let html = '';
@@ -70,7 +75,11 @@ export const render: SsrRender = async ({ url, data, siteUrl }) => {
         <HelmetProvider context={helmetContext}>
           <QueryClientProvider client={queryClient}>
             <QueriesProvider queries={queries}>
-              <StaticRouterProvider router={router} context={context} hydrate={false} />
+              <I18nextProvider i18n={i18n}>
+                <RequestProvider flags={flags}>
+                  <StaticRouterProvider router={router} context={context} hydrate={false} />
+                </RequestProvider>
+              </I18nextProvider>
             </QueriesProvider>
           </QueryClientProvider>
         </HelmetProvider>
@@ -102,6 +111,7 @@ export const render: SsrRender = async ({ url, data, siteUrl }) => {
     appHtml,
     state: {
       rq: dehydrate(queryClient),
+      flags,
       router: { loaderData: context.loaderData, actionData: context.actionData, errors: serializeErrors(context.errors) },
     },
   };

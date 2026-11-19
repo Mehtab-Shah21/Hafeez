@@ -120,6 +120,36 @@
   }
 }
 
+/* Preloader: forks lift (transform), then the overlay fades out. Total under 1 s, no JS needed. */
+@keyframes preloader-lift {
+  0%,
+  15% {
+    transform: translateY(0);
+  }
+  70%,
+  100% {
+    transform: translateY(-22px);
+  }
+}
+@keyframes preloader-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.preloader {
+  animation: preloader-out 0.25s 0.7s ease-out forwards;
+  pointer-events: none;
+}
+.preloader-forks {
+  animation: preloader-lift 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preloader {
+    display: none;
+  }
+}
+
 /* Reduced motion: keep fades, drop movement. Components also check the preference in JS. */
 @media (prefers-reduced-motion: reduce) {
   *,

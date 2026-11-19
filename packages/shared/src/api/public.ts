@@ -247,6 +247,8 @@ export interface SsrRequest {
   data: PublicDataSource;
   /** Absolute origin for canonical/hreflang/OG URLs, from the PUBLIC_SITE_URL env. */
   siteUrl: string;
+  /** Show the first-visit preloader (server decides from a session cookie, so repeat visits never see it). */
+  showPreloader: boolean;
 }
 export type SsrResult =
   | { type: 'redirect'; status: 301 | 302 | 307 | 308; location: string }

@@ -5,7 +5,7 @@ import { Seo } from '@/components/seo/Seo';
 import { organizationLd, websiteLd } from '@/components/seo/jsonld';
 import { Button } from '@/components/ui/button';
 import { useLang, useQueries } from '@/data/context';
-import { t } from '@/locales/ui';
+import { useTranslation } from 'react-i18next';
 
 interface StatsContent {
   items: { value: number; suffix: string; label: string }[];
@@ -17,6 +17,7 @@ interface StatsContent {
  */
 export function Home() {
   const lang = useLang();
+  const { t } = useTranslation();
   const q = useQueries();
   const { data: settings } = useSuspenseQuery(q.settings(lang));
   const { data: page } = useSuspenseQuery(q.page('home', lang));
@@ -72,7 +73,7 @@ export function Home() {
 
       <Section tone="light">
         <Container>
-          <Heading level={2}>{t(lang, 'ourServices')}</Heading>
+          <Heading level={2}>{t('sections.services')}</Heading>
           <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {services.map((s) => (
               <li key={s.id}>
@@ -83,7 +84,7 @@ export function Home() {
                     to={`/${lang}/services/${s.slug}`}
                     className="mt-6 font-semibold text-blue underline-offset-4 hover:underline"
                   >
-                    {t(lang, 'viewService')}
+                    {t('cta.learnMore')}
                     <span className="sr-only">: {s.title}</span>
                   </Link>
                 </Card>
