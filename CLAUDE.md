@@ -110,16 +110,16 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Swagger `/api/docs` (+ `/api/docs.json`)
 - [x] **Step 3: Layout, navbar, footer** (2026-11-20): react-i18next per request, glass pill navbar (hide on scroll via shared rAF loop) + EN/AR switcher + Radix mobile menu, footer with quote band/wordmark/branches/hours/licence/TRN, WhatsApp FAB, mobile CTA bar, cookie consent (analytics only after consent), CSS-only preloader (session cookie `pl`), Lenis smooth scroll
 - [x] **Step 4: Hero animation** (2026-11-20): layered SVG scene (`apps/web/src/hero/HeroScene.tsx`), CSS intro (clip-mask line rise, ≤1.8 s, no JS), GSAP ScrollTrigger pinned scrub (hoist → travel → load → truck departs → pull back, parallax on high tier), scroll-scrubbed video mode (eased currentTime in the shared rAF loop), device tiers, reduced motion = static frame + fades. Swap point `apps/web/src/config/hero.ts`; QA override `?motion=force`
-- [ ] **Step 5: Pages**
-  - [ ] Home
-  - [ ] About
-  - [ ] Services index + detail
-  - [ ] Equipment catalog + detail
-  - [ ] Logistics & Courier (truck types, UAE/GCC map, booking form, tracking UI)
-  - [ ] Contact
-  - [ ] Projects / Clients
-  - [ ] Blog index + post
-  - [ ] Legal (privacy, terms) + 404
+- [x] **Step 5: Pages** (2026-11-20; photos pending, see Known Issues)
+  - [x] Home (hero, client marquee, services, divider, featured equipment, logistics/courier split, why-us stats count-up, process, projects, testimonials carousel, FAQ + FAQPage JSON-LD)
+  - [x] About (story, mission/vision, stats, values, milestones, team)
+  - [x] Services index + detail (features, use cases, related equipment, FAQs, Service JSON-LD, quote form)
+  - [x] Equipment catalog (URL-driven filters, SSR) + detail (spec table, gallery, Product/Offer JSON-LD, quote pre-fill)
+  - [x] Logistics & Courier (fleet types, schematic UAE/GCC lanes map, booking form, tracking widget)
+  - [x] Contact (multipart inquiry form with file upload, WhatsApp/phone, offices, hours, embedded map)
+  - [x] Projects / Clients (index + case study)
+  - [x] Blog index + post (Article JSON-LD, sanitised HTML)
+  - [x] Legal (privacy, terms), credits page, 404
 - [ ] **Step 6: Admin panel**
   - [ ] Login + shell + RBAC-aware nav
   - [ ] Dashboard
@@ -196,10 +196,15 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 | 2026-11-20 | Language switch uses a full document load (`reloadDocument`) | Re-creates i18n, dir and SSR head cleanly in the other language |
 | 2026-11-20 | Hero intro in CSS keyframes, scroll storytelling in GSAP (lazy) | Intro starts at first paint without JS and never flashes; GSAP stays out of the critical path |
 | 2026-11-20 | RTL hero mirrors the whole SVG (`rtl:-scale-x-100`) | Movement direction mirrors automatically; no per-tween direction maths |
+| 2026-11-20 | Section reveals use IntersectionObserver + CSS transitions; Framer Motion (LazyMotion/domAnimation) only for the testimonial carousel | Keeps the home bundle small; SSR HTML stays visible without JS |
+| 2026-11-20 | Equipment filters live in the URL (`?category&min&max&operator`) | Filtered views are shareable and server-rendered with the same query keys |
+| 2026-11-20 | Inquiry attachments stored in `uploads-private/` (never served), downloaded via the admin API | Customer files are not public |
+| 2026-11-20 | Cards without photos render a machinery illustration on a gradient | No broken/empty images while stock or client photos are pending |
 | 2026-11-20 | Push to GitHub after every completed step (user instruction) | — |
 | 2026-11-19 | GateGuard (ECC plugin) exempted for `apps/**, packages/**, prisma/**, scripts/**, docs/**` via `.claude/settings.local.json` env | User approved; it was blocking every first file write. Destructive-shell checks stay on |
 
 ## 11. Known Issues / TODO
+- Photos: none imported yet (sandbox blocks Wikimedia). Run `npm run photos:import` (added in Step 6) on a machine with internet, or upload photos in Admin → Media. Until then cards show machinery illustrations.
 - Photo fetching needs network access to `commons.wikimedia.org` and `upload.wikimedia.org`. The sandboxed shell currently can't reach them, so the user must allow it before Step 5, or supply photos themselves.
 - Company name, tagline, city, licence/TRN, phone, addresses are placeholders until supplied (seeded into DB, editable in admin).
 - Courier tracking (`GET /api/public/track/:id`) will be a stub returning demo data.
@@ -234,6 +239,7 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
+- **2026-11-20** — Step 5 done: pages (`apps/web/src/pages/{About,Services,Equipment,Logistics,Contact,Content}.tsx`, Home rebuilt), `components/{cards,Testimonials,logistics}.tsx`, `components/forms/InquiryForm.tsx`, `components/ui/blocks.tsx`, `components/machinery/icons.tsx`; server: team/credits endpoints, multipart inquiries (private `uploads-private/`), Nodemailer/Resend mailer, storage adapter (local/S3/Cloudinary), sanitize-html. 26 tests pass; every page SSR-checked (1 H1, title, JSON-LD, 404s).
 - **2026-11-20** — Step 4 done: `hero/{Hero,HeroScene,useHeroScroll,useScrollVideo}.tsx`, `config/hero.ts`, hero CSS keyframes; Vite HMR now shares the app port (`createSsrHost(httpServer)`). Verified pin + sequence at 1440 with `?motion=force` (the browser pane runs with reduced motion on).
 - **2026-11-20** — Step 3 done: `apps/web/src/locales/{en,ar}.ts`, `lib/{i18n,raf,motion,links}.ts`, `data/request.tsx`, `components/layout/*`, `components/motion/SmoothScroll.tsx`, LangLayout, entries, SSR preloader cookie. Checked desktop EN + mobile AR (menu, CTA bar).
 - **2026-11-20** — Step 2 built, verified and pushed. Pushed Step 1 first (commit `991ed98`). Files: `packages/shared/src/api/public.ts` (DTOs, PublicDataSource, SSR contract, LOCALE_TAGS), `apps/server/src/{app.ts,index.ts}`, `modules/public/*`, `middleware/redirects.ts`, `ssr/ssr.ts`, `openapi/docs.ts`, `test/public.test.ts`, `apps/web/src/{entry-client,entry-server,routes}.tsx`, `data/*`, `lib/api.ts`, `pages/*`, `components/seo/*`, `locales/ui.ts`, vite/postcss/tailwind config tweaks, `.claude/launch.json`. Left: Step 3 onward.

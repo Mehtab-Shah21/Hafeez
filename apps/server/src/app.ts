@@ -9,6 +9,7 @@ import { DEFAULT_LOCALE, isLocale } from '@app/shared';
 import { env, isProd } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { prisma } from './lib/prisma.js';
+import { uploadsDir } from './lib/storage.js';
 import { requireAuth } from './middleware/auth.js';
 import { requireCsrf } from './middleware/csrf.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -95,6 +96,8 @@ export function createApp(options: AppOptions = {}): Express {
   app.use('/api', cors({ origin: origins.length ? origins : false, credentials: true }));
 
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
+  // Public media (processed images). Private inquiry files live in uploads-private and are never mounted.
+  app.use('/uploads', express.static(uploadsDir, { maxAge: '30d', immutable: true, index: false, dotfiles: 'deny' }));
 
   // ---- API
   app.use('/api/public', publicRouter({ inquiryMax: 5, inquiryWindowMs: 60 * 60 * 1000, ...options.public }));

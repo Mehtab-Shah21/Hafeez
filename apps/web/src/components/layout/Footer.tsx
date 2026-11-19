@@ -35,11 +35,11 @@ export function Footer({ settings, lang }: { settings: PublicSettingsDTO; lang: 
   const year = new Intl.DateTimeFormat('en-AE', { year: 'numeric', timeZone: TIMEZONE }).format(new Date());
 
   return (
-    <footer className="surface-dark relative mt-24 bg-navy pb-28 text-offwhite md:pb-10">
-      <div className="-translate-y-1/2">
+    <footer className="surface-dark relative bg-navy pb-28 pt-16 text-offwhite md:pb-10 md:pt-20">
+      <div>
         <QuoteBand settings={settings} lang={lang} />
       </div>
-      <Container className="-mt-6 md:-mt-10">
+      <Container className="mt-16 md:mt-20">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-3">
             <Logo settings={settings} lang={lang} />

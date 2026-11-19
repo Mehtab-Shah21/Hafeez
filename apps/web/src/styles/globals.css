@@ -109,6 +109,34 @@
   .skip-link:focus {
     @apply translate-y-0;
   }
+  /* Long-form text (blog posts, legal pages). */
+  .prose-site {
+    @apply text-lg leading-relaxed text-ink;
+  }
+  .prose-site > * + * {
+    @apply mt-5;
+  }
+  .prose-site h2 {
+    @apply mt-12 text-2xl font-semibold text-navy;
+  }
+  .prose-site h3 {
+    @apply mt-8 text-xl font-semibold text-navy;
+  }
+  .prose-site a {
+    @apply font-medium text-blue underline;
+  }
+  .prose-site ul {
+    @apply list-disc ps-6;
+  }
+  .prose-site ol {
+    @apply list-decimal ps-6;
+  }
+  .prose-site blockquote {
+    @apply border-s-4 border-yellow ps-5 text-steel;
+  }
+  .prose-site img {
+    @apply rounded-3xl;
+  }
   /* Blueprint grid accent for navy sections (static; never animated).
      Not named bg-*: tailwind-merge would treat it as a background colour and drop bg-navy. */
   .blueprint-grid {
@@ -175,6 +203,81 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Reveal-once (see components/ui/blocks.tsx). */
+.reveal {
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+/* Logo marquee */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes marquee-rtl {
+  to {
+    transform: translateX(50%);
+  }
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+[dir='rtl'] .marquee-track {
+  animation-name: marquee-rtl;
+}
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Divider truck crossing once */
+.divider-truck {
+  inset-inline-start: 0;
+  transform: translateX(-120%);
+}
+[dir='rtl'] .divider-truck {
+  transform: scaleX(-1) translateX(-120%);
+}
+.divider-truck.is-in {
+  transition: transform 2.4s cubic-bezier(0.45, 0, 0.2, 1);
+  transform: translateX(min(1200px, 85vw));
+}
+[dir='rtl'] .divider-truck.is-in {
+  transform: scaleX(-1) translateX(min(1200px, 85vw));
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+@keyframes hook-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-hidden {
+    transform: none;
+  }
+  .marquee-track {
+    animation: none;
+  }
+  .divider-truck.is-in {
+    transition: none;
   }
 }
 

@@ -1,4 +1,7 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import multer from 'multer';
 import { Router, type RequestHandler } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -12,7 +15,11 @@ import {
   type Locale,
   type TrackingDTO,
 } from '@app/shared';
+import { env } from '../../config/env.js';
 import { notFound } from '../../lib/errors.js';
+import { inquiryEmail, sendMail } from '../../lib/mailer.js';
+import { stripTags } from '../../lib/sanitize.js';
+import { privateUploadsDir } from '../../lib/storage.js';
 import { asyncHandler, ok } from '../../lib/http.js';
 import { prisma } from '../../lib/prisma.js';
 import { validate } from '../../middleware/validate.js';
@@ -40,6 +47,8 @@ const equipmentQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
+
+const ATTACHMENT_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
 
 const trackIdSchema = z.object({ id: z.string().regex(/^[A-Za-z0-9-]{4,40}$/) });
 
@@ -95,6 +104,8 @@ export function publicRouter({ inquiryMax, inquiryWindowMs }: PublicRouterOption
     }),
   );
 
+  r.get('/team', cacheable, asyncHandler(async (req, res) => ok(res, await svc.team(langOf(req.query)))));
+  r.get('/credits', cacheable, asyncHandler(async (req, res) => ok(res, await svc.credits(langOf(req.query)))));
   r.get('/fleet', cacheable, asyncHandler(async (req, res) => ok(res, await svc.fleet(langOf(req.query)))));
   r.get('/clients', cacheable, asyncHandler(async (req, res) => ok(res, await svc.clients(langOf(req.query)))));
   r.get('/testimonials', cacheable, asyncHandler(async (req, res) => ok(res, await svc.testimonials(langOf(req.query)))));
@@ -157,32 +168,68 @@ export function publicRouter({ inquiryMax, inquiryWindowMs }: PublicRouterOption
     next();
   };
 
+  // Accepts JSON or multipart (with an optional `file`). Attachments are private: stored outside the
+  // public uploads folder and downloadable only from the admin.
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 30 },
+    fileFilter: (_req, file, cb) => cb(null, ATTACHMENT_TYPES.has(file.mimetype)),
+  });
+  const parseMultipart: RequestHandler = (req, _res, next) => {
+    const body = req.body as Record<string, unknown>;
+    if (typeof body.booking === 'string') {
+      try {
+        body.booking = JSON.parse(body.booking) as unknown;
+      } catch {
+        body.booking = undefined;
+      }
+    }
+    next();
+  };
+
   r.post(
     '/inquiries',
     inquiryLimiter,
+    upload.single('file'),
+    parseMultipart,
     honeypot,
     validate(inquiryCreateSchema),
     asyncHandler(async (req, res) => {
       const input = req.body as InquiryCreateInput;
       const ipHash = createHash('sha256').update(req.ip ?? '').digest('hex').slice(0, 32);
+      let attachmentId: string | null = null;
+      if (req.file) {
+        const ext = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype.split('/')[1]!;
+        attachmentId = `${randomUUID()}.${ext}`;
+        await mkdir(privateUploadsDir, { recursive: true });
+        await writeFile(resolve(privateUploadsDir, attachmentId), req.file.buffer);
+      }
       const row = await prisma.inquiry.create({
         data: {
           type: input.type,
-          name: input.name,
-          company: input.company,
+          name: stripTags(input.name),
+          company: stripTags(input.company),
           phone: input.phone,
           email: input.email,
-          serviceType: input.serviceType,
-          equipmentSlug: input.equipmentSlug,
-          message: input.message,
+          serviceType: stripTags(input.serviceType),
+          equipmentSlug: stripTags(input.equipmentSlug),
+          message: stripTags(input.message),
           locale: input.locale,
           payload: input.booking ?? {},
           notes: [],
+          attachmentId,
           ipHash,
           userAgent: (req.get('user-agent') ?? '').slice(0, 300),
         },
       });
-      // Email notification is wired in Step 5 (Nodemailer); the inbox shows it immediately.
+      const to = (process.env.INQUIRY_NOTIFY_TO ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+      if (to.length) {
+        const { text, html } = inquiryEmail(
+          { type: row.type, name: row.name, company: row.company, phone: row.phone, email: row.email, service: row.serviceType, equipment: row.equipmentSlug, message: row.message, attachment: attachmentId ? 'yes' : 'no', payload: row.payload },
+          `${env.PUBLIC_SITE_URL}/admin/inquiries/${row.id}`,
+        );
+        void sendMail(to, `New ${row.type} request: ${row.name}`, text, html);
+      }
       return ok(res, { received: true, reference: row.id.slice(-8).toUpperCase() }, undefined, 201);
     }),
   );

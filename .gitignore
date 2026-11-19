@@ -14,3 +14,4 @@ coverage/
 
 # Local Claude Code settings (machine-specific hooks/env)
 .claude/settings.local.json
+uploads-private/

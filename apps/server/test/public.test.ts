@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { prisma } from '../src/lib/prisma.js';
 
-const app = createApp({ public: { inquiryMax: 3, inquiryWindowMs: 60_000 } });
+const app = createApp({ public: { inquiryMax: 50, inquiryWindowMs: 60_000 } });
 
 const validInquiry = {
   type: 'quote',
@@ -79,6 +79,31 @@ describe('inquiries', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.reference).toHaveLength(8);
     expect(await prisma.inquiry.count({ where: { email: 'test@example.com' } })).toBeGreaterThan(0);
+  });
+
+  it('accepts multipart with a PDF attachment and stores it privately', async () => {
+    const res = await request(app)
+      .post('/api/public/inquiries')
+      .field('type', 'contact')
+      .field('name', 'File Person')
+      .field('phone', '+971 4 123 4567')
+      .field('email', 'file@example.com')
+      .field('booking', JSON.stringify({ pickup: 'Jebel Ali', weightKg: 1200 }))
+      .attach('file', Buffer.from('%PDF-1.4 test'), { filename: 'plan.pdf', contentType: 'application/pdf' });
+    expect(res.status).toBe(201);
+    const row = await prisma.inquiry.findFirst({ where: { email: 'file@example.com' } });
+    expect(row?.attachmentId).toMatch(/.pdf$/);
+    expect(row?.payload).toMatchObject({ pickup: 'Jebel Ali', weightKg: 1200 });
+    // Attachments are never publicly served.
+    const pub = await request(app).get('/uploads/' + row?.attachmentId);
+    expect(pub.status).toBe(404);
+  });
+
+  it('strips HTML from text fields', async () => {
+    await request(app).post('/api/public/inquiries').send({ ...validInquiry, email: 'xss@example.com', name: '<b>Bold</b> Name', message: '<script>alert(1)</script>Hi' });
+    const row = await prisma.inquiry.findFirst({ where: { email: 'xss@example.com' } });
+    expect(row?.name).toBe('Bold Name');
+    expect(row?.message).toBe('Hi');
   });
 
   it('rejects a non-UAE phone number', async () => {

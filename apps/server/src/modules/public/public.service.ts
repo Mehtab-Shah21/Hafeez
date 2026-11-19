@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   type BlogContent,
   type CompanySettings,
@@ -21,9 +21,12 @@ import {
   type AnalyticsSettings,
   type EquipmentCategoryContent,
   type PageContent,
+  type TeamContent,
+  type CreditDTO,
 } from '@app/shared';
 import { env } from '../../config/env.js';
 import { prisma } from '../../lib/prisma.js';
+import { sanitizeRichText } from '../../lib/sanitize.js';
 import { pick, toMedia, toSeo } from './mappers.js';
 
 const PUBLISHED = 'PUBLISHED';
@@ -305,6 +308,19 @@ export const publicService: PublicDataSource = {
     return mapBlog(r, lang, seo.get(r.id) ?? null);
   },
 
+  async team(lang) {
+    const rows = await prisma.teamMember.findMany({ where: { isVisible: true }, orderBy: { order: 'asc' }, include: { photo: true } });
+    return rows.map((r) => ({ id: r.id, ...pick<TeamContent>(r.content, lang), photo: toMedia(r.photo, lang) }));
+  },
+
+  async credits(lang) {
+    const rows = await prisma.media.findMany({ where: { credit: { not: Prisma.AnyNull } }, orderBy: { createdAt: 'asc' } });
+    return rows
+      .map((m) => toMedia(m, lang))
+      .filter((m): m is NonNullable<typeof m> => !!m?.credit)
+      .map((m): CreditDTO => ({ id: m.id, alt: m.alt, src: m.src, credit: m.credit! }));
+  },
+
   async faqs(lang, group) {
     const rows = await prisma.faq.findMany({ where: { isVisible: true, ...(group ? { group } : {}) }, orderBy: [{ group: 'asc' }, { order: 'asc' }] });
     return rows.map((r) => ({ id: r.id, group: r.group, ...pick<FaqItem>(r.content, lang) }));
@@ -337,7 +353,8 @@ function mapBlog(r: BlogRow, lang: Locale, seo: ReturnType<typeof toSeo>) {
     slug: r.slug,
     title: c.title,
     excerpt: c.excerpt,
-    bodyHtml: c.bodyHtml,
+    // Defence in depth: the admin sanitises on save, and we sanitise again on read.
+    bodyHtml: sanitizeRichText(c.bodyHtml),
     tags: (r.tags as string[] | null) ?? [],
     publishedAt: r.publishedAt?.toISOString() ?? null,
     cover: toMedia(r.cover, lang),

@@ -1,6 +1,6 @@
 import { hydrate, QueryClient, QueryClientProvider, type DehydratedState } from '@tanstack/react-query';
 import { StrictMode } from 'react';
-import { hydrateRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { createBrowserRouter, RouterProvider, UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
@@ -64,8 +64,8 @@ const router = createBrowserRouter(createRoutes(queryClient, queries), {
 
 const root = document.getElementById('root');
 if (root) {
-  hydrateRoot(
-    root,
+  // Public pages hydrate server HTML; the client-only admin shell has none, so it renders fresh.
+  const tree = (
     <StrictMode>
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
@@ -78,6 +78,8 @@ if (root) {
           </QueriesProvider>
         </QueryClientProvider>
       </HelmetProvider>
-    </StrictMode>,
+    </StrictMode>
   );
+  if (state) hydrateRoot(root, tree);
+  else createRoot(root).render(tree);
 }

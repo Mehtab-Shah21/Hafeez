@@ -30,8 +30,8 @@ async function upsertSeo(entityType: SeoEntityType, entityId: string, seo: L<Seo
 }
 
 const autoSeo = (en: { name: string; summary: string }, ar: { name: string; summary: string }, suffix: L<string>): L<Seo> => ({
-  en: { title: `${en.name} ${suffix.en}`.slice(0, 60), description: en.summary.slice(0, 160), focusKeyword: en.name.toLowerCase() },
-  ar: { title: `${ar.name} ${suffix.ar}`.slice(0, 60), description: ar.summary.slice(0, 160), focusKeyword: ar.name },
+  en: { title: `${en.name} ${suffix.en}`.trim().slice(0, 60), description: en.summary.slice(0, 160), focusKeyword: en.name.toLowerCase() },
+  ar: { title: `${ar.name} ${suffix.ar}`.trim().slice(0, 60), description: ar.summary.slice(0, 160), focusKeyword: ar.name },
 });
 
 async function main() {

@@ -192,6 +192,21 @@ export interface ProjectDTO extends ProjectContent {
   seo: SeoDTO | null;
 }
 
+export interface TeamMemberDTO {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  photo: MediaDTO | null;
+}
+
+export interface CreditDTO {
+  id: string;
+  alt: string;
+  src: string;
+  credit: NonNullable<MediaDTO['credit']>;
+}
+
 export interface FaqDTO extends FaqItem {
   id: string;
   group: string;
@@ -237,6 +252,8 @@ export interface PublicDataSource {
   blog(lang: Locale, page?: number): Promise<Paged<BlogPostDTO>>;
   blogPost(slug: string, lang: Locale): Promise<BlogPostDTO | null>;
   faqs(lang: Locale, group?: string): Promise<FaqDTO[]>;
+  team(lang: Locale): Promise<TeamMemberDTO[]>;
+  credits(lang: Locale): Promise<CreditDTO[]>;
 }
 
 export type { InquiryCreateInput };

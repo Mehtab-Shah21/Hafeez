@@ -54,4 +54,6 @@ export const httpDataSource: PublicDataSource = {
   blog: (lang, page = 1) => getPaged('/blog', { lang, page }),
   blogPost: (slug, lang) => getOrNull(`/blog/${encodeURIComponent(slug)}`, { lang }),
   faqs: (lang, group) => get('/faqs', { lang, group }),
+  team: (lang) => get('/team', { lang }),
+  credits: (lang) => get('/credits', { lang }),
 };

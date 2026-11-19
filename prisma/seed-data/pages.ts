@@ -76,6 +76,27 @@ export const pages: SeedPage[] = [
           ar: { mission: 'إيصال المعدة المناسبة والشاحنة المناسبة إلى الموقع بأمان وفي الموعد.', vision: 'أن نكون الاتصال الأول للرفع واللوجستيات في الإمارات.' },
         },
       },
+      {
+        type: 'story',
+        content: {
+          en: { title: 'Built on the quay', body: '[Placeholder story: replace in Admin → Pages → About.] We started with two forklifts and a lowbed at Jebel Ali. Today our own fleet of cranes, trucks and courier vans works across all seven emirates, with the same rule from day one: arrive when we say, and leave the site safer than we found it.' },
+          ar: { title: 'بدأنا من الرصيف', body: '[نص مؤقت: استبدله من لوحة التحكم ← الصفحات ← من نحن.] بدأنا برافعتين شوكيتين وشاحنة منخفضة في جبل علي، واليوم يعمل أسطولنا من الرافعات والشاحنات وشاحنات التوصيل في الإمارات السبع، بالقاعدة نفسها منذ اليوم الأول: نصل في الموعد ونترك الموقع أكثر أمانًا مما وجدناه.' },
+        },
+      },
+      {
+        type: 'values',
+        content: {
+          en: { items: [{ title: 'Safety first', body: 'Every lift planned, every operator certified, every machine inspected.' }, { title: 'On time', body: 'We confirm a time and we keep it, or we call before it slips.' }, { title: 'Straight answers', body: 'Clear prices in AED and honest advice on the right machine.' }, { title: 'Own fleet', body: 'Our machines and our people, not brokered capacity.' }] },
+          ar: { items: [{ title: 'السلامة أولًا', body: 'كل رفع مخطط، وكل مشغل معتمد، وكل معدة مفحوصة.' }, { title: 'في الموعد', body: 'نؤكد الموعد ونلتزم به، أو نتصل قبل أي تأخير.' }, { title: 'إجابات واضحة', body: 'أسعار واضحة بالدرهم ونصيحة صادقة حول المعدة المناسبة.' }, { title: 'أسطولنا الخاص', body: 'معداتنا وفريقنا، وليست سعة وسيطة.' }] },
+        },
+      },
+      {
+        type: 'milestones',
+        content: {
+          en: { items: [{ year: '[2010]', title: 'Founded in Dubai', body: 'Two forklifts and one lowbed at Jebel Ali.' }, { year: '[2014]', title: 'First 100 t crane', body: 'Heavy lifting added to the fleet.' }, { year: '[2018]', title: 'Abu Dhabi yard', body: 'Mussafah branch opens.' }, { year: '[2022]', title: 'Courier division', body: 'Same-day delivery across three emirates.' }] },
+          ar: { items: [{ year: '[2010]', title: 'التأسيس في دبي', body: 'رافعتان شوكيتان وشاحنة منخفضة في جبل علي.' }, { year: '[2014]', title: 'أول رافعة 100 طن', body: 'إضافة الرفع الثقيل إلى الأسطول.' }, { year: '[2018]', title: 'ساحة أبوظبي', body: 'افتتاح فرع مصفح.' }, { year: '[2022]', title: 'قسم التوصيل', body: 'توصيل في اليوم نفسه في ثلاث إمارات.' }] },
+        },
+      },
     ],
   },
   {
