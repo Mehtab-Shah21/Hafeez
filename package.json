@@ -3,10 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": ">=20" },
-  "workspaces": ["packages/*", "apps/*"],
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "npm run build -w @app/shared && npm run dev -w @app/server",
+    "dev": "npm run build -w @app/shared && tsx --env-file=.env apps/server/src/index.ts",
     "dev:web": "npm run dev -w @app/web",
     "build": "npm run build -w @app/shared && npm run build -w @app/web && npm run build -w @app/server",
     "start": "npm run start -w @app/server",
@@ -21,9 +26,12 @@
     "db:pg:schema": "node scripts/prisma-postgres.mjs",
     "db:migrate:pg": "node scripts/prisma-postgres.mjs && prisma migrate dev --schema prisma/postgres/schema.prisma",
     "db:deploy:pg": "node scripts/prisma-postgres.mjs && prisma migrate deploy --schema prisma/postgres/schema.prisma",
-    "seed": "npm run build -w @app/shared && tsx prisma/seed.ts"
+    "seed": "npm run build -w @app/shared && tsx prisma/seed.ts",
+    "dev:watch": "npm run build -w @app/shared && tsx watch --clear-screen=false --env-file=.env apps/server/src/index.ts"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@types/node": "^22.10.0",

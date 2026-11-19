@@ -8,5 +8,7 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: { port: 5173 },
+  // react-helmet-async ships CommonJS that Node ESM cannot import by name; bundle it into the SSR build.
+  ssr: { noExternal: ['react-helmet-async'] },
   build: { target: 'es2020', cssCodeSplit: true },
 });

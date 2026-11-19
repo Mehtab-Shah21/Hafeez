@@ -8,7 +8,8 @@ import animate from 'tailwindcss-animate';
 const brand = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // relative: resolve globs from this file, not the process cwd (the dev server runs from the repo root).
+  content: { relative: true, files: ['./index.html', './src/**/*.{ts,tsx}'] },
   theme: {
     container: {
       center: true,

@@ -21,10 +21,10 @@ Premium, animated, bilingual (EN/AR, full RTL) marketing website plus full admin
 - Single prod command: `npm run build && npm start` (one Express process serves API + SSR + static assets).
 
 ## 3. How to Run
-_Verified 2026-11-19 (Step 1). `npm run dev` becomes Express + Vite SSR in Step 2; today it runs the API only._
+_Verified 2026-11-20 (Step 2): `npm run dev` = Express + Vite middleware SSR on :3000; `npm run build && npm start` = production SSR._
 - Requirements: Node ≥ 20 (dev machine has Node 24.13, npm 11.5), PostgreSQL 15+ for prod (SQLite file for dev).
 - First run: `npm install` → copy `.env.example` to `.env` and fill the secrets + `SEED_ADMIN_PASSWORD` (12+ chars) → `npm run db:migrate -- --name init` (also seeds) → `npm run seed` (idempotent; safe to re-run).
-- Dev: `npm run dev` (API on :3000) · `npm run dev:web` (Vite on :5173, dev-only styleguide). In the desktop app: preview configs `api` / `web` in `.claude/launch.json`.
+- Dev: `npm run dev` → http://localhost:3000 (`/en`, `/ar`, `/api/docs`, dev-only `/__styleguide`). Web/SSR code reloads on every request through Vite; restart after editing server code, or use `npm run dev:watch` (see Known Issues). In the desktop app: preview configs `dev` and `prod` (port 3100, NODE_ENV=production) in `.claude/launch.json`.
 - Build: `npm run build` (shared → web → server) · Start prod: `npm start`
 - Quality: `npm run lint` · `npm run typecheck` · `npm test` (Vitest + Supertest; uses a throwaway `prisma/test.db`)
 - Postgres: `npm run db:migrate:pg` / `npm run db:deploy:pg` (generates `prisma/postgres/schema.prisma` from the SQLite schema).
@@ -102,12 +102,12 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Seed script (EN + AR demo data, admin from env, SEO defaults for 41 entities × 2 locales), idempotent
   - [x] Auth (login/refresh/logout/me/csrf, bcrypt, JWT access cookie + rotating opaque refresh, CSRF, RBAC), 13 tests passing
   - [x] Tailwind tokens, self-hosted fonts, Button + Container/Section/Heading/Card/GlassCard, dev styleguide checked at 1440 + 360, EN + AR
-- [ ] **Step 2: Express API + SSR pipeline (proven on one page)**
-  - [ ] Security middleware, error handler, logging, envelope, ETag
-  - [ ] Public API endpoints
-  - [ ] Vite SSR dev + prod renderer, Query dehydration, Helmet head injection
-  - [ ] Status codes (404/301/302/410), redirects middleware
-  - [ ] Swagger `/api/docs`
+- [x] **Step 2: Express API + SSR pipeline (proven on one page)** (2026-11-20)
+  - [x] Security middleware (helmet CSP/HSTS/frame-deny/referrer, cors allow-list, compression br/gzip, hpp, pino-http), error handler, envelope, strong ETag + 304
+  - [x] Public API endpoints (all listed in brief §10) incl. inquiries POST (honeypot + rate limit + Zod) and tracking stub
+  - [x] Vite SSR dev (middleware) + prod (built bundle) renderer, Query dehydration, Helmet head injection, theme CSS vars from DB
+  - [x] Status codes: 404 (unknown/invalid-lang routes, logged to NotFoundLog), 301/302/410 from DB redirects, `/` → 302 by Accept-Language
+  - [x] Swagger `/api/docs` (+ `/api/docs.json`)
 - [ ] **Step 3: Layout, navbar, footer** (glass navbar + EN/AR switcher, footer + wordmark + quote band, WhatsApp FAB, mobile CTA bar, cookie consent, preloader)
 - [ ] **Step 4: Hero animation** (vector layers, intro timeline, pinned scroll scrub, video mode, device tiers, reduced motion)
 - [ ] **Step 5: Pages**
@@ -152,16 +152,17 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 - [ ] **Step 8: Performance and accessibility audit**
 
 ## 8. Current Status
-- Step 1 done: workspace installs, migrates, seeds, typechecks, lints, builds; 13 auth tests pass.
-- Server is a minimal Express app (`apps/server/src/app.ts` `createApp()`): health, auth, users list. No public API, SSR or full security stack yet.
-- Web is a Vite app with the design system and a dev-only styleguide (`apps/web/src/dev/Styleguide.tsx`, entry `src/main.tsx`), no routes/SSR yet.
+- Steps 1–2 done and pushed to GitHub (`origin` = github.com/Mehtab-Shah21/Hafeez, branch `main`).
+- Full SSR works in dev and prod: `/en` and `/ar` render Home from the DB with one H1, title, description, canonical, hreflang (en-AE, ar-AE, x-default), OG/Twitter, Organization+LocalBusiness+WebSite JSON-LD; 404s are real 404s.
+- Home is a functional placeholder (hero text, stats, services list). No navbar/footer/hero animation yet (Steps 3–4).
+- 24 tests pass (13 auth, 11 public API).
 
 ## 9. Next Steps
-1. Step 2: full middleware stack in `createApp()`: helmet CSP/HSTS, cors, compression, hpp, ETag, pino-http, redirects middleware.
-2. Public API modules (`/api/public/*`) with service layer + envelope + pagination; inquiry POST with honeypot + rate limit.
-3. Vite SSR: replace `apps/web/src/main.tsx` with `entry-client.tsx` / `entry-server.tsx`, React Router data router with `/:lang` routes, TanStack Query dehydration, Helmet head injection, theme CSS vars injected from the `theme` setting.
-4. Prove SSR on Home with `curl` (H1, meta, canonical, hreflang, JSON-LD in raw HTML); 404/301/302/410 statuses.
-5. Swagger `/api/docs`; then Step 3 (layout, navbar, footer).
+1. Step 3: set up react-i18next (per-request instance in SSR) and move `apps/web/src/locales/ui.ts` strings into it.
+2. Glass pill Navbar (from `navbar` setting) with EN/AR switcher that maps the current path, mobile menu, "Get a quote" CTA.
+3. Footer (quote band, large wordmark, columns, contact, Trade Licence/TRN), WhatsApp FAB, mobile bottom CTA bar.
+4. Cookie consent banner (analytics only after consent) and preloader (≤1s, sessionStorage skip, never hides SSR content).
+5. Check at 360/768/1024/1440/1920 in EN + AR; commit + push to GitHub.
 
 ## 10. Decisions Log
 | Date | Decision | Reason |
@@ -183,13 +184,26 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
 | 2026-11-19 | Custom CSS classes never start with `bg-`/`text-` etc. (e.g. `blueprint-grid`) | tailwind-merge treats them as utilities and drops real ones (bug found: navy bg vanished) |
 | 2026-11-19 | Numbers with suffixes (350+) render inside `dir="ltr"` in RTL | Otherwise bidi shows "+350" in Arabic |
 | 2026-11-19 | Brief overrides impeccable defaults for the hero eyebrow and the glass navbar | User's brief explicitly asks for both |
+| 2026-11-20 | Locale tags `en-AE` / `ar-AE` for `<html lang>`, hreflang and og:locale; URL prefixes stay `/en` and `/ar` | User asked for English + Arabic (UAE) |
+| 2026-11-20 | One `PublicDataSource` contract (shared): server implements it in-process for SSR, browser over HTTP; same TanStack Query keys | SSR without an HTTP hop; hydration reuses the cache (verified: no API calls after load) |
+| 2026-11-20 | Loaders only `ensureQueryData` and return null; SSR waits for `onAllReady` and renders to a buffer before sending | Crawlers always get complete HTML; Helmet head must be known before the response starts |
+| 2026-11-20 | SSR state in `<script type="application/json" id="__STATE__">` (escaped), router hydration data passed manually; no inline JS | Prod CSP is `script-src 'self'` with no nonces needed |
+| 2026-11-20 | Admin URLs get a client-only shell with `noindex,nofollow` | Brief: admin is CSR-only and not indexed |
+| 2026-11-20 | `react-helmet-async` bundled into the SSR build (`ssr.noExternal`) | Its CommonJS build breaks Node ESM named imports |
+| 2026-11-20 | Tailwind config path and `content.relative` set explicitly | In dev, Vite runs inside Express with cwd = repo root |
+| 2026-11-20 | Git author for this repo = `Mehtab-Shah21 <Mehtab-Shah21@users.noreply.github.com>` (repo-local config); `.claude/settings.local.json` git-ignored | Keeps the user's personal email out of public commits; local hook settings are machine-specific |
+| 2026-11-20 | Push to GitHub after every completed step (user instruction) | — |
 | 2026-11-19 | GateGuard (ECC plugin) exempted for `apps/**, packages/**, prisma/**, scripts/**, docs/**` via `.claude/settings.local.json` env | User approved; it was blocking every first file write. Destructive-shell checks stay on |
 
 ## 11. Known Issues / TODO
 - Photo fetching needs network access to `commons.wikimedia.org` and `upload.wikimedia.org`. The sandboxed shell currently can't reach them, so the user must allow it before Step 5, or supply photos themselves.
 - Company name, tagline, city, licence/TRN, phone, addresses are placeholders until supplied (seeded into DB, editable in admin).
 - Courier tracking (`GET /api/public/track/:id`) will be a stub returning demo data.
-- `apps/web/src/main.tsx` is a temporary Step 1 entry (styleguide only in dev); replaced by SSR entries in Step 2. The styleguide (`src/dev/`) must stay dev-only.
+- Watch mode restart loop: `tsx watch` / `node --watch` restart the server every 1–2 s on this Windows machine (cause not found), so `npm run dev` runs without watch. `npm run dev:watch` exists but may loop. Web/SSR code is reloaded by Vite regardless.
+- The styleguide (`apps/web/src/dev/`, route `/__styleguide`) is dev-only (tree-shaken in prod); delete it before launch.
+- UI chrome strings live in `apps/web/src/locales/ui.ts` until react-i18next is set up in Step 3.
+- Inquiry email notification (Nodemailer) and file upload are not wired yet (Step 5). `SeoDTO.ogImage` resolves from media in Step 6.
+- Prod CSP has no analytics/Maps script origins yet (Step 7, after cookie consent).
 - Postgres path (`db:migrate:pg`) is untested until a Postgres instance is available.
 - Seed testimonials, team members and company details are clearly marked placeholders (`[Name]`, `[COMPANY NAME]`, `+971 … 0000`).
 - Inter's woff2 ships all subsets (latin-ext, cyrillic, greek, vietnamese); browsers only download what a page uses (unicode-range), but trim the imports in Step 8 if Lighthouse flags it.
@@ -204,9 +218,17 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - All demo copy, addresses, phone numbers, Trade Licence / TRN.
 
 ## 13. Audit Results
+- **2026-11-20 (Step 2, prod build on :3100, checked with fetch from the browser because the sandbox blocks curl to localhost):**
+  - `/` → 302 by Accept-Language. `/en` 200, 25 kB HTML, exactly 1 H1 "Moving the weight of the UAE forward", title "Crane Rental Dubai, Logistics & Courier UAE | [COMPANY NAME]"; description, canonical, hreflang en-AE/ar-AE/x-default, og:*, JSON-LD (Organization+LocalBusiness, WebSite), theme `<style>` and `__STATE__` all present in raw HTML.
+  - `/ar` → `<html lang="ar-AE" dir="rtl">`, Arabic title and canonical `/ar`.
+  - 404: `/en/does-not-exist`, `/xx`, `/fr/about`, `/api/nope`. `/admin` 200 with `noindex,nofollow`.
+  - Headers: CSP `script-src 'self'`, HSTS (prod), X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, `Content-Encoding: br`, HTML `no-cache`, hashed assets `max-age=31536000, immutable`, API `max-age=60, stale-while-revalidate=600` + ETag (304 tested).
+  - Client JS 359.9 kB (113.1 kB gzip) incl. React, Router, Query, Helmet: under the 180 kB budget. No hydration warnings; no API refetch after load.
+  - Tests 24/24, typecheck ✓, lint ✓, build ✓.
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
+- **2026-11-20** — Step 2 built, verified and pushed. Pushed Step 1 first (commit `991ed98`). Files: `packages/shared/src/api/public.ts` (DTOs, PublicDataSource, SSR contract, LOCALE_TAGS), `apps/server/src/{app.ts,index.ts}`, `modules/public/*`, `middleware/redirects.ts`, `ssr/ssr.ts`, `openapi/docs.ts`, `test/public.test.ts`, `apps/web/src/{entry-client,entry-server,routes}.tsx`, `data/*`, `lib/api.ts`, `pages/*`, `components/seo/*`, `locales/ui.ts`, vite/postcss/tailwind config tweaks, `.claude/launch.json`. Left: Step 3 onward.
 - **2026-11-19** — Step 1 built and verified. Files: root config (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.env.example`, `.gitignore`, `.prettierrc`), `packages/shared/src/**` (constants, Zod schemas, envelope), `prisma/schema.prisma` + `migrations/` + `seed.ts` + `seed-data/*`, `scripts/prisma-postgres.mjs`, `apps/server/src/**` (env, prisma, logger, errors, middleware auth/rbac/csrf/validate/errorHandler, modules auth + users, `createApp`), `apps/server/test/**`, `apps/web/**` (vite, tailwind, globals.css, Button, primitives, dev styleguide), `.claude/launch.json`. `git init` done, nothing committed. Left: Step 2 onward.
 - **2026-11-19** — Ran `npx impeccable install` (user request). Updated the impeccable skill to v4.10.0, added 5 agents in `.claude/agents/impeccable-*`, put the engine binary v0.1.27 in `~/.impeccable/bin/`, and added design-check hooks in `.claude/settings.local.json` (SessionStart, PostToolUse on Edit/Write, Stop deep pass).
 - **2026-11-17** — Switched imagery to licensed, credited real stand-in photos (Wikimedia Commons, via taste-skill). A test search failed because the sandbox has no network access, so the downloads are deferred to page building.
