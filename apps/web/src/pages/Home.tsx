@@ -137,7 +137,10 @@ export function Home() {
                 )}
                 <div className="mt-8">
                   <Button asChild variant="glass" chevron>
-                    <Link to={href}>{t('cta.learnMore')}</Link>
+                    <Link to={href}>
+                      {t('cta.learnMore')}
+                      <span className="sr-only">: {title}</span>
+                    </Link>
                   </Button>
                 </div>
               </Reveal>

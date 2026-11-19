@@ -14,6 +14,7 @@ export default tseslint.config(
       'prisma/migrations/**',
       'prisma/postgres/**',
       '**/*.config.js',
+      'deploy/**',
     ],
   },
   js.configs.recommended,

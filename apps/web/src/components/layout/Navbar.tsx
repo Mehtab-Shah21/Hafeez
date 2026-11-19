@@ -80,7 +80,7 @@ export function Navbar({ settings, lang }: { settings: PublicSettingsDTO; lang: 
             to={switchLocalePath(pathname, search, other)}
             hrefLang={other}
             lang={other}
-            aria-label={t('nav.switchLabel')}
+            title={t('nav.switchLabel')}
             className="hidden rounded-full px-3 py-2 text-sm font-semibold text-offwhite/90 hover:bg-white/10 sm:inline-flex"
             reloadDocument
           >

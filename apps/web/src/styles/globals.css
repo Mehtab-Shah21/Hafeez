@@ -109,6 +109,10 @@
   .skip-link:focus {
     @apply translate-y-0;
   }
+  /* Decorative footer wordmark: drawn via ::before so it is not treated as page text (contrast/a11y). */
+  .wordmark::before {
+    content: attr(data-wordmark);
+  }
   /* Long-form text (blog posts, legal pages). */
   .prose-site {
     @apply text-lg leading-relaxed text-ink;

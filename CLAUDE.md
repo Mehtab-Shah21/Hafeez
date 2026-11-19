@@ -21,7 +21,7 @@ Premium, animated, bilingual (EN/AR, full RTL) marketing website plus full admin
 - Single prod command: `npm run build && npm start` (one Express process serves API + SSR + static assets).
 
 ## 3. How to Run
-_Verified 2026-11-20 (Step 2): `npm run dev` = Express + Vite middleware SSR on :3000; `npm run build && npm start` = production SSR._
+_Verified 2026-11-20 (all steps): `npm run dev` = Express + Vite middleware SSR on :3000; `npm run build && npm start` = production SSR._
 - Requirements: Node ≥ 20 (dev machine has Node 24.13, npm 11.5), PostgreSQL 15+ for prod (SQLite file for dev).
 - First run: `npm install` → copy `.env.example` to `.env` and fill the secrets + `SEED_ADMIN_PASSWORD` (12+ chars) → `npm run db:migrate -- --name init` (also seeds) → `npm run seed` (idempotent; safe to re-run).
 - Dev: `npm run dev` → http://localhost:3000 (`/en`, `/ar`, `/api/docs`, dev-only `/__styleguide`). Web/SSR code reloads on every request through Vite; restart after editing server code, or use `npm run dev:watch` (see Known Issues). In the desktop app: preview configs `dev` and `prod` (port 3100, NODE_ENV=production) in `.claude/launch.json`.
@@ -141,20 +141,20 @@ Status: [ ] not started / [~] in progress / [x] done (runs, typechecks, builds)
   - [x] Global SEO settings (title template, default OG image, Google/Bing verification, GA4/GTM/Pixel IDs, custom head/body code with warning)
   - [x] Bulk SEO table with inline title/description editing and re-score
 - [x] **Step 7: SEO/technical pass** (2026-11-20): dynamic `/sitemap.xml` + `/robots.txt`; JSON-LD per page type (Organization/LocalBusiness + AggregateRating, WebSite, BreadcrumbList, Service, Product/Offer, FAQPage, Article) + manual override; per-item OG image picker; favicon from settings (`apps/web/public/favicon.svg` fallback); latin font preloads in prod SSR; CSP allows GA4/GTM/Meta/Turnstile origins (scripts load only after consent); custom head/body code injected only after consent; optional Cloudflare Turnstile (`TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET`)
-- [ ] **Step 8: Performance and accessibility audit**
+- [x] **Step 8: Performance and accessibility audit** (2026-11-20): Lighthouse 100/100/100 (Accessibility/Best Practices/SEO) on home EN (mobile + desktop), home AR, contact, equipment detail; LCP 378 ms / CLS 0.00 (local, unthrottled trace); fixed contrast (WhatsApp green, footer wordmark), link names, label/name mismatch; README + `deploy/` (PM2, Nginx)
 
 ## 8. Current Status
-- Steps 1–2 done and pushed to GitHub (`origin` = github.com/Mehtab-Shah21/Hafeez, branch `main`).
-- Full SSR works in dev and prod: `/en` and `/ar` render Home from the DB with one H1, title, description, canonical, hreflang (en-AE, ar-AE, x-default), OG/Twitter, Organization+LocalBusiness+WebSite JSON-LD; 404s are real 404s.
-- Home is a functional placeholder (hero text, stats, services list). No navbar/footer/hero animation yet (Steps 3–4).
-- 24 tests pass (13 auth, 11 public API).
+- All 8 steps done and pushed to GitHub (`origin` = github.com/Mehtab-Shah21/Hafeez, branch `main`).
+- Public site (EN + AR, SSR, animated hero, every page), admin panel + SEO Manager, sitemap/robots, 35 API tests, Lighthouse 100 on a11y/best-practices/SEO.
+- Remaining work is content and launch: real company details, photos/video, PostgreSQL + mail + storage in production (see Next Steps).
 
 ## 9. Next Steps
-1. Step 3: set up react-i18next (per-request instance in SSR) and move `apps/web/src/locales/ui.ts` strings into it.
-2. Glass pill Navbar (from `navbar` setting) with EN/AR switcher that maps the current path, mobile menu, "Get a quote" CTA.
-3. Footer (quote band, large wordmark, columns, contact, Trade Licence/TRN), WhatsApp FAB, mobile bottom CTA bar.
-4. Cookie consent banner (analytics only after consent) and preloader (≤1s, sessionStorage skip, never hides SSR content).
-5. Check at 360/768/1024/1440/1920 in EN + AR; commit + push to GitHub.
+1. Enter real company details in Admin → Company & site (name EN/AR, logos, phones, WhatsApp, branches, licence/TRN) and review every seeded `[Placeholder]` text.
+2. Run `npm run photos:import` on a machine with internet (or upload your own photos), then review each stand-in in Admin → Media.
+3. Production: PostgreSQL (`db:deploy:pg` + generate the client from `prisma/postgres/schema.prisma`), SMTP/Resend, `STORAGE_DRIVER=s3|cloudinary`, real `PUBLIC_SITE_URL`; verify Postgres migrations on a real instance (untested so far).
+4. Run Lighthouse Performance on the deployed site with mobile throttling (local trace only so far) and check INP on real devices.
+5. Optional: replace the vector hero with a rendered scroll video; add Search Console + GA4 IDs in Admin → Global SEO.
+6. Delete `apps/web/src/dev/Styleguide.tsx` before launch (dev-only already).
 
 ## 10. Decisions Log
 | Date | Decision | Reason |
@@ -225,6 +225,11 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - All demo copy, addresses, phone numbers, Trade Licence / TRN.
 
 ## 13. Audit Results
+- **2026-11-20 (Step 8, prod build, Lighthouse via Chrome DevTools MCP):**
+  - Accessibility / Best Practices / SEO = 100 / 100 / 100 on `/en` (mobile + desktop), `/ar` (mobile), `/en/contact` (mobile), `/en/equipment/mobile-crane-50t` (mobile).
+  - Performance trace (local, no throttling): LCP 378 ms (TTFB 69 ms), CLS 0.00. The Lighthouse Performance category was not available in this tool; re-run on the deployed site with mobile throttling.
+  - Bundles (gzip): entry JS 139.5 kB + Home chunk 33.0 kB + shared 3.3 kB ≈ 176 kB for the home route (budget 180 kB); CSS 10.7 kB; admin chunk 41.9 kB (+ TipTap 109 kB only in the blog editor), never loaded on public pages.
+  - Tests 35/35, typecheck ✓, lint ✓, build ✓.
 - **2026-11-20 (Step 2, prod build on :3100, checked with fetch from the browser because the sandbox blocks curl to localhost):**
   - `/` → 302 by Accept-Language. `/en` 200, 25 kB HTML, exactly 1 H1 "Moving the weight of the UAE forward", title "Crane Rental Dubai, Logistics & Courier UAE | [COMPANY NAME]"; description, canonical, hreflang en-AE/ar-AE/x-default, og:*, JSON-LD (Organization+LocalBusiness, WebSite), theme `<style>` and `__STATE__` all present in raw HTML.
   - `/ar` → `<html lang="ar-AE" dir="rtl">`, Arabic title and canonical `/ar`.
@@ -235,6 +240,7 @@ _Filled as placeholders are created. Licensed Wikimedia Commons stand-in photos 
 - **2026-11-19 (Step 1 baseline):** typecheck ✓, lint ✓ (0 problems), build ✓, tests 13/13 ✓. Web bundle (styleguide stripped in prod): JS 143.6 kB (46.1 kB gzip, mostly React), CSS 20.1 kB (5.0 kB gzip). Built server answers `/healthz` 200 and `/api/admin/auth/me` 401. No Lighthouse/SSR checks yet (Step 2+).
 
 ## 14. Session Log
+- **2026-11-20** — Step 8 done: Lighthouse audits and fixes (contrast, link names, accessible names), README, `deploy/ecosystem.config.cjs`, `deploy/nginx.conf`. All steps complete; see Next Steps for launch tasks.
 - **2026-11-20** — Step 7 done: `apps/server/src/modules/seo/seo-files.router.ts`, CSP update in `app.ts`, OG image resolution in `public.service.ts`/`mappers.ts`, Turnstile (server + `InquiryForm`), consent-gated custom code (`CookieConsent.tsx`), favicon, AggregateRating, font preloads (`ssr.ts`). Checked on the prod build: sitemap 68 URLs with alternates, robots, preloads, JSON-LD types per page.
 - **2026-11-20** — Step 6 done: server `apps/server/src/modules/admin/*` (crud factory, content, settings, media/sharp, inquiries/users/audit/dashboard, SEO with `lib/seo/{entities,score}.ts`), `apps/server/scripts/import-photos.ts` (`npm run photos:import`); web `apps/web/src/admin/*`. Route-level code splitting (React Router `lazy`, resolved before hydration). 35 tests pass; admin checked in browser (login, dashboard, service + SEO panel save, company settings save, equipment save).
 - **2026-11-20** — Step 5 done: pages (`apps/web/src/pages/{About,Services,Equipment,Logistics,Contact,Content}.tsx`, Home rebuilt), `components/{cards,Testimonials,logistics}.tsx`, `components/forms/InquiryForm.tsx`, `components/ui/blocks.tsx`, `components/machinery/icons.tsx`; server: team/credits endpoints, multipart inquiries (private `uploads-private/`), Nodemailer/Resend mailer, storage adapter (local/S3/Cloudinary), sanitize-html. 26 tests pass; every page SSR-checked (1 H1, title, JSON-LD, 404s).

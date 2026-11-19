@@ -23,7 +23,7 @@ export function WhatsAppFab({ settings }: { settings: PublicSettingsDTO }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={t('cta.whatsappLabel')}
-      className="fixed bottom-6 end-6 z-40 hidden size-14 place-items-center rounded-full bg-[#1FAF55] text-white shadow-lift transition-transform duration-200 ease-out-quart hover:scale-105 active:scale-95 md:grid"
+      className="fixed bottom-6 end-6 z-40 hidden size-14 place-items-center rounded-full bg-[#0B7A3B] text-white shadow-lift transition-transform duration-200 ease-out-quart hover:scale-105 active:scale-95 md:grid"
     >
       <WhatsAppIcon className="size-7" />
     </a>

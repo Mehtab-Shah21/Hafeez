@@ -32,7 +32,7 @@ export function Contact() {
       <PageHeader title={title} intro={page?.intro} crumbs={[{ label: title }]} lang={lang} siteUrl={settings.siteUrl}>
         <div className="mt-8 flex flex-wrap gap-3">
           {c.whatsapp && (
-            <Button asChild size="lg" className="bg-[#1FAF55] text-white hover:bg-[#178F45]" chevron={false}>
+            <Button asChild size="lg" className="bg-[#0B7A3B] text-white hover:bg-[#096530]" chevron={false}>
               <a href={whatsappUrl(c.whatsapp, t('cta.whatsappMessage'))} target="_blank" rel="noopener noreferrer">
                 <WhatsAppIcon className="size-5" /> {t('cta.whatsapp')}
               </a>

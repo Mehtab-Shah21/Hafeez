@@ -110,10 +110,9 @@ export function Footer({ settings, lang }: { settings: PublicSettingsDTO; lang: 
           aria-hidden="true"
           // Size scales with the name length so the whole wordmark fits the container width.
           style={{ fontSize: `min(13rem, ${Math.max(4, 150 / Math.max(c.name.length, 6)).toFixed(2)}vw)` }}
-          className="mt-16 select-none overflow-hidden whitespace-nowrap font-display uppercase leading-[0.8] text-white/[0.06] rtl:font-bold rtl:normal-case"
-        >
-          {c.name}
-        </p>
+          data-wordmark={c.name}
+          className="wordmark mt-16 select-none overflow-hidden whitespace-nowrap font-display uppercase leading-[0.8] text-white/[0.06] rtl:font-bold rtl:normal-case"
+        />
 
         <div className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-offwhite/60 md:flex-row md:items-center md:justify-between">
           <p>
