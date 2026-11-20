@@ -1,17 +1,21 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Check } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { EquipmentCard, ProjectCard, ServiceCard } from '@/components/cards';
-import { ParcelIcon, TruckIcon } from '@/components/machinery/icons';
-import { Container, Section } from '@/components/primitives';
+import { EquipmentCard, ProjectCard } from '@/components/cards';
+import { MachineryIcon, ParcelIcon, TruckIcon } from '@/components/machinery/icons';
+import { Container } from '@/components/primitives';
 import { Seo } from '@/components/seo/Seo';
 import { organizationLd, websiteLd } from '@/components/seo/jsonld';
 import { Testimonials } from '@/components/Testimonials';
-import { FaqJsonLd, FaqList, MachineryDivider, Marquee, Reveal, SectionHeading, StatCounter } from '@/components/ui/blocks';
+import { FaqJsonLd, FaqList, Marquee, StatCounter } from '@/components/ui/blocks';
 import { Button } from '@/components/ui/button';
 import { useLang, useQueries } from '@/data/context';
 import { Hero } from '@/hero/Hero';
+import { DestinationPanel, HubPanel, PortRunway, Stop } from '@/journey/Journey';
+import { SkylineSprite } from '@/journey/SkylineSprite';
+import { JourneyBackdrop } from '@/journey3d/Backdrop';
+import { localePath } from '@/lib/links';
 
 interface Stats {
   items: { value: number; suffix: string; label: string }[];
@@ -25,6 +29,11 @@ interface WhyUs {
   points: string[];
 }
 
+/**
+ * Home = one scroll journey over a fixed 3D world (journey3d/World): the port crane loads a
+ * container, the truck drives past every emirate, the Fujairah hub hands the crate to a pickup,
+ * and the pickup delivers it. Each content panel below is a [data-stage] scroll anchor.
+ */
 export function Home() {
   const lang = useLang();
   const { t } = useTranslation();
@@ -56,11 +65,179 @@ export function Home() {
         jsonLd={[organizationLd(settings, lang, testimonials.map((x) => x.rating)), websiteLd(settings, lang)]}
       />
       <FaqJsonLd items={faqs} />
+      <JourneyBackdrop />
+      <SkylineSprite />
 
-      <Hero settings={settings} lang={lang} />
+      <div data-stage={0} className="relative">
+        <Hero settings={settings} lang={lang} backdrop="world" />
+        <PortRunway lang={lang} />
+      </div>
+
+      <div aria-label={t('journey.label')} role="region" className="pointer-events-none relative">
+        <Stop stage={1} n={1} place="dubai" side="end" title={t('sections.services')} lang={lang}>
+          <p className="mt-3 text-steel">{t('sections.servicesIntro')}</p>
+          <ul className="mt-5 divide-y divide-navy/10">
+            {services.map((s) => (
+              <li key={s.id}>
+                <Link to={`/${lang}/services/${s.slug}`} className="group flex items-start gap-4 py-4">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-navy text-yellow">
+                    <MachineryIcon name={s.icon} className="size-6" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-navy group-hover:text-blue">{s.title}</span>
+                    <span className="mt-1 line-clamp-2 block text-sm text-steel">{s.excerpt}</span>
+                  </span>
+                  <ChevronRight className="mt-3 size-4 shrink-0 text-steel rtl:rotate-180" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Stop>
+
+        <Stop stage={2} n={2} place="sharjah" side="start" title={t('sections.equipment')} lang={lang}>
+          <p className="mt-3 text-steel">{t('sections.equipmentIntro')}</p>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+            {featured.items.slice(0, 4).map((e) => (
+              <li key={e.id}>
+                <EquipmentCard e={e} lang={lang} />
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6">
+            <Button asChild variant="outline" chevron={false}>
+              <Link to={`/${lang}/equipment`}>{t('cta.viewAll')}</Link>
+            </Button>
+          </div>
+        </Stop>
+
+        <Stop stage={3} n={3} place="ajman" side="end" title={`${t('sections.logistics')} · ${t('sections.courier')}`} lang={lang}>
+          <div className="mt-6 grid gap-4">
+            {[
+              { s: logistics, Icon: TruckIcon, title: t('sections.logistics'), href: `/${lang}/logistics` },
+              { s: courier, Icon: ParcelIcon, title: t('sections.courier'), href: `/${lang}/logistics#tracking` },
+            ].map(({ s, Icon, title, href }) => (
+              <div key={title} className="rounded-3xl bg-navy p-6 text-white">
+                <div className="flex items-center gap-3">
+                  <Icon className="size-9 text-yellow" />
+                  <h3 className="text-xl font-semibold">{title}</h3>
+                </div>
+                <p className="mt-3 text-offwhite/75">{s?.overview}</p>
+                {s && (
+                  <ul className="mt-4 space-y-1.5">
+                    {s.features.slice(0, 4).map((f) => (
+                      <li key={f.title} className="flex gap-2 text-sm text-offwhite/85">
+                        <Check className="mt-0.5 size-4 shrink-0 text-yellow" aria-hidden="true" />
+                        {f.title}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-5">
+                  <Button asChild variant="glass" size="sm" chevron>
+                    <Link to={href}>
+                      {t('cta.learnMore')}
+                      <span className="sr-only">: {title}</span>
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Stop>
+
+        <Stop stage={4} n={4} place="umm-al-quwain" side="start" title={why?.title ?? t('sections.why')} lang={lang}>
+          {why && (
+            <ul className="mt-6 space-y-3">
+              {why.points.map((p) => (
+                <li key={p} className="flex gap-3 text-ink">
+                  <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-yellow">
+                    <Check className="size-3.5 text-navy" aria-hidden="true" />
+                  </span>
+                  {p}
+                </li>
+              ))}
+            </ul>
+          )}
+          {stats && (
+            <dl className="mt-6 grid grid-cols-2 gap-3">
+              {stats.items.map((s) => (
+                <div key={s.label} className="rounded-3xl bg-navy p-5 text-white">
+                  <dt className="text-sm text-offwhite/70">{s.label}</dt>
+                  <dd className="mt-2 font-display text-4xl text-yellow rtl:font-bold">
+                    <StatCounter value={s.value} suffix={s.suffix} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </Stop>
+
+        <Stop stage={5} n={5} place="ras-al-khaimah" side="end" title={process?.title ?? t('sections.process')} lang={lang}>
+          {process && (
+            <ol className="mt-6 space-y-5">
+              {process.steps.map((st, i) => (
+                <li key={st.title} className="flex gap-4">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-yellow font-display text-lg text-navy">
+                    <bdi>{i + 1}</bdi>
+                  </span>
+                  <div>
+                    <h3 className="font-semibold text-navy">{st.title}</h3>
+                    <p className="mt-1 text-sm text-steel">{st.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Stop>
+
+        <HubPanel stage={6} lang={lang} />
+
+        <Stop stage={7} n={7} place="abu-dhabi" side="start" title={t('sections.projects')} lang={lang}>
+          <ul className="mt-6 grid gap-4">
+            {projects
+              .filter((p) => p.featured)
+              .slice(0, 2)
+              .map((p) => (
+                <li key={p.id}>
+                  <ProjectCard p={p} lang={lang} />
+                </li>
+              ))}
+          </ul>
+          <div className="mt-6">
+            <Button asChild variant="outline" chevron={false}>
+              <Link to={`/${lang}/projects`}>{t('cta.viewAll')}</Link>
+            </Button>
+          </div>
+        </Stop>
+
+        <Stop stage={8} n={8} place="al-ain" side="end" title={t('sections.testimonials')} lang={lang}>
+          <div className="mt-6">
+            <Testimonials items={testimonials} lang={lang} />
+          </div>
+        </Stop>
+
+        <Stop stage={9} n={9} place="liwa" side="start" title={t('sections.faq')} lang={lang}>
+          <FaqList items={faqs} className="mt-6" />
+        </Stop>
+
+        <DestinationPanel
+          stage={10}
+          cta={
+            <>
+              <Button asChild variant="secondary">
+                <Link to={localePath(lang, settings.navbar.ctaHref)}>{settings.navbar.ctaLabel}</Link>
+              </Button>
+              <Button asChild variant="outline" chevron={false}>
+                <Link to={`/${lang}/logistics#tracking`}>{t('cta.learnMore')}</Link>
+              </Button>
+            </>
+          }
+        />
+        <div data-stage={11} aria-hidden="true" className="h-[60svh]" />
+      </div>
 
       {clients.length > 0 && (
-        <section aria-label={t('sections.clients')} className="bg-navy pb-10 pt-6">
+        <section aria-label={t('sections.clients')} className="relative bg-navy pb-10 pt-10">
           <Container>
             <p className="mb-5 text-center text-sm font-medium text-offwhite/60">{t('sections.clients')}</p>
           </Container>
@@ -76,180 +253,6 @@ export function Home() {
             ))}
           </Marquee>
         </section>
-      )}
-
-      <Section tone="light">
-        <Container>
-          <SectionHeading title={t('sections.services')} intro={t('sections.servicesIntro')} />
-          <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {services.map((s, i) => (
-              <Reveal as="li" key={s.id} delay={(i % 3) * 80}>
-                <ServiceCard s={s} lang={lang} />
-              </Reveal>
-            ))}
-          </ul>
-        </Container>
-      </Section>
-
-      <MachineryDivider />
-
-      <Section tone="light" className="pt-12 md:pt-16 lg:pt-20">
-        <Container>
-          <SectionHeading
-            title={t('sections.equipment')}
-            intro={t('sections.equipmentIntro')}
-            action={
-              <Button asChild variant="outline" chevron={false}>
-                <Link to={`/${lang}/equipment`}>{t('cta.viewAll')}</Link>
-              </Button>
-            }
-          />
-          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.items.map((e, i) => (
-              <Reveal as="li" key={e.id} delay={(i % 3) * 80}>
-                <EquipmentCard e={e} lang={lang} />
-              </Reveal>
-            ))}
-          </ul>
-        </Container>
-      </Section>
-
-      <Section tone="navy" blueprint>
-        <Container>
-          <div className="grid gap-6 lg:grid-cols-2">
-            {[
-              { s: logistics, Icon: TruckIcon, title: t('sections.logistics'), href: `/${lang}/logistics` },
-              { s: courier, Icon: ParcelIcon, title: t('sections.courier'), href: `/${lang}/logistics#tracking` },
-            ].map(({ s, Icon, title, href }) => (
-              <Reveal key={title} className="group flex flex-col rounded-4xl border border-white/10 bg-white/[0.04] p-8 md:p-10">
-                <Icon className="size-14 text-yellow" />
-                <h2 className="mt-8 font-display text-display-md uppercase text-white rtl:font-bold rtl:normal-case">{title}</h2>
-                <p className="mt-4 max-w-prose text-offwhite/75">{s?.overview}</p>
-                {s && (
-                  <ul className="mt-6 space-y-2">
-                    {s.features.map((f) => (
-                      <li key={f.title} className="flex gap-2 text-offwhite/85">
-                        <Check className="mt-1 size-4 shrink-0 text-yellow" aria-hidden="true" />
-                        {f.title}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="mt-8">
-                  <Button asChild variant="glass" chevron>
-                    <Link to={href}>
-                      {t('cta.learnMore')}
-                      <span className="sr-only">: {title}</span>
-                    </Link>
-                  </Button>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </Section>
-
-      {(why || stats) && (
-        <Section tone="white">
-          <Container>
-            <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
-              <div>
-                <SectionHeading title={why?.title ?? t('sections.why')} />
-                {why && (
-                  <ul className="mt-8 space-y-4">
-                    {why.points.map((p) => (
-                      <li key={p} className="flex gap-3 text-lg text-ink">
-                        <span className="mt-1.5 grid size-5 shrink-0 place-items-center rounded-full bg-yellow">
-                          <Check className="size-3.5 text-navy" aria-hidden="true" />
-                        </span>
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {stats && (
-                <dl className="grid grid-cols-2 gap-4">
-                  {stats.items.map((s) => (
-                    <div key={s.label} className="rounded-3xl bg-navy p-6 text-white md:p-8">
-                      <dt className="text-sm text-offwhite/70">{s.label}</dt>
-                      <dd className="mt-3 font-display text-display-lg text-yellow rtl:font-bold">
-                        <StatCounter value={s.value} suffix={s.suffix} />
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </div>
-          </Container>
-        </Section>
-      )}
-
-      {process && (
-        <Section tone="light">
-          <Container>
-            <SectionHeading title={process.title} />
-            <ol className="relative mt-14 grid gap-8 md:grid-cols-4">
-              {process.steps.map((st, i) => (
-                <Reveal as="li" key={st.title} delay={i * 100} className="relative">
-                  {i < process.steps.length - 1 && (
-                    <span aria-hidden="true" className="absolute start-16 top-7 hidden h-0.5 w-[calc(100%-3rem)] border-t-2 border-dashed border-navy/15 md:block" />
-                  )}
-                  <span className="relative grid size-14 place-items-center rounded-full bg-yellow font-display text-2xl text-navy shadow-cta">
-                    <bdi>{i + 1}</bdi>
-                  </span>
-                  <h3 className="mt-5 text-xl font-semibold text-navy">{st.title}</h3>
-                  <p className="mt-2 text-steel">{st.body}</p>
-                </Reveal>
-              ))}
-            </ol>
-          </Container>
-        </Section>
-      )}
-
-      {projects.length > 0 && (
-        <Section tone="white">
-          <Container>
-            <SectionHeading
-              title={t('sections.projects')}
-              action={
-                <Button asChild variant="outline" chevron={false}>
-                  <Link to={`/${lang}/projects`}>{t('cta.viewAll')}</Link>
-                </Button>
-              }
-            />
-            <ul className="mt-12 grid gap-6 md:grid-cols-2">
-              {projects
-                .filter((p) => p.featured)
-                .slice(0, 4)
-                .map((p, i) => (
-                  <Reveal as="li" key={p.id} delay={(i % 2) * 80}>
-                    <ProjectCard p={p} lang={lang} />
-                  </Reveal>
-                ))}
-            </ul>
-          </Container>
-        </Section>
-      )}
-
-      {testimonials.length > 0 && (
-        <Section tone="light">
-          <Container>
-            <SectionHeading title={t('sections.testimonials')} />
-            <div className="mt-12">
-              <Testimonials items={testimonials} lang={lang} />
-            </div>
-          </Container>
-        </Section>
-      )}
-
-      {faqs.length > 0 && (
-        <Section tone="white">
-          <Container className="grid gap-10 lg:grid-cols-[1fr_1.4fr]">
-            <SectionHeading title={t('sections.faq')} />
-            <FaqList items={faqs} />
-          </Container>
-        </Section>
       )}
     </>
   );

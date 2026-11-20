@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from 'react';
 import { heroConfig } from '@/config/hero';
 import type { DeviceTier } from '@/lib/motion';
+import { HERO_GEOMETRY as G } from './HeroScene';
 
 interface Options {
   section: RefObject<HTMLElement>;
@@ -12,10 +13,14 @@ interface Options {
 }
 
 /**
- * Scroll storytelling for the vector hero: the section pins for ~2.6 viewports (1.4 on low tier)
- * and one GSAP timeline is scrubbed by scroll: crane hoists the container → trolley travels →
- * container lands on the flatbed → truck departs (wheels spin, slight bounce) → camera pulls back.
- * Scrolling up reverses it. Transforms and opacity only; GSAP is loaded lazily after hydration.
+ * Scroll storytelling for the port hero. The section pins and one scrubbed GSAP timeline plays:
+ * trolley runs out over the ship → spreader drops onto the blue container → hoist → trolley
+ * runs back over the truck → container lands on the chassis → spreader lifts clear → truck
+ * drives off (towards the road that continues down the page). Scrolling up reverses it.
+ *
+ * The crane parts are driven from one state object rendered into SVG transforms in the
+ * timeline's onUpdate, so the container stays locked to the spreader while it is carried.
+ * GSAP is loaded lazily after hydration.
  */
 export function useHeroScroll({ section, scene, copy, tier, intensity, enabled }: Options) {
   useEffect(() => {
@@ -26,37 +31,39 @@ export function useHeroScroll({ section, scene, copy, tier, intensity, enabled }
     void Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([{ gsap }, { ScrollTrigger }]) => {
       if (cancelled || !section.current || !scene.current) return;
       gsap.registerPlugin(ScrollTrigger);
-
-      // Keep ScrollTrigger in sync with Lenis smooth scrolling when it is active.
       const lenis = (window as unknown as { __lenis?: { on: (e: string, fn: () => void) => void } }).__lenis;
       lenis?.on('scroll', ScrollTrigger.update);
 
       const svg = scene.current;
       const q = (id: string) => svg.querySelector<SVGGElement>(`#${id}`);
       const trolley = q('hs-trolley');
-      const cable = q('hs-cable');
-      const hook = q('hs-hook');
+      const ropes = q('hs-ropes');
+      const spreader = q('hs-spreader');
       const load = q('hs-load');
       const truck = q('hs-truck');
-      const wheels = svg.querySelectorAll<SVGGElement>('.hs-wheel');
-      const forks = q('hs-forks');
-      const forklift = q('hs-forklift');
       const beam = q('hs-beam');
       const skyline = q('hs-skyline');
-      const portcranes = q('hs-portcranes');
+      const wheels = svg.querySelectorAll<SVGGElement>('#hs-truck .hs-wheel-spin');
 
-      const lift = -200 * intensity;
-      const travel = 290; // trolley centre 600 → flatbed centre 890 (fixed geometry, not scaled)
-      const cableLen = 326;
+      // Spreader y is its top edge; it is 10 units tall, so a carried box's top = spreader + 10.
+      const s = { tx: G.trolleyRest, sy: G.spreaderRest, bx: G.box.x, by: G.box.top };
+      const render = () => {
+        trolley?.setAttribute('transform', `translate(${s.tx} 0)`);
+        ropes?.setAttribute('transform', `translate(0 ${G.trolleyY}) scale(1 ${(s.sy - G.trolleyY) / 100}) translate(0 ${-G.trolleyY})`);
+        spreader?.setAttribute('transform', `translate(0 ${s.sy})`);
+        load?.setAttribute('transform', `translate(${s.bx} ${s.by})`);
+      };
+
       const lengthVh = tier === 'low' ? heroConfig.scrollLength.low : heroConfig.scrollLength.high;
+      const hoistTop = 330;
+      const drive = -1350; // truck + box leave the frame to the left
+      const truckX = G.trolleyRest; // container centre on the chassis
 
       ctx = gsap.context(() => {
-        gsap.set(cable, { transformOrigin: '50% 0%' });
-        gsap.set(wheels, { transformOrigin: '50% 50%', transformBox: 'fill-box' });
-        gsap.set(svg, { transformOrigin: '70% 80%', scale: 1.06 });
-
+        gsap.set(wheels, { transformOrigin: '50% 50%' });
         const tl = gsap.timeline({
-          defaults: { ease: 'none' },
+          defaults: { ease: 'power1.inOut' },
+          onUpdate: render,
           scrollTrigger: {
             trigger: section.current,
             start: 'top top',
@@ -64,45 +71,25 @@ export function useHeroScroll({ section, scene, copy, tier, intensity, enabled }
             pin: true,
             scrub: 0.6,
             anticipatePin: 1,
-            // will-change only while the pinned sequence is active.
             onToggle: (self) => {
               const v = self.isActive ? 'transform' : 'auto';
-              [svg, load, truck, trolley].forEach((el) => el && (el.style.willChange = v));
+              [load, truck, trolley].forEach((el) => el && (el.style.willChange = v));
             },
           },
         });
 
-        // 0 → 1: hoist
-        tl.to(load, { y: lift, duration: 1, ease: 'power1.inOut' }, 0)
-          .to(hook, { y: lift, duration: 1, ease: 'power1.inOut' }, 0)
-          .to(cable, { scaleY: (cableLen + lift) / cableLen, duration: 1, ease: 'power1.inOut' }, 0)
-          .to(forklift, { x: 160, duration: 1.2, ease: 'sine.inOut' }, 0)
-          .to(forks, { y: -26, duration: 0.6 }, 0.2)
-          // 1 → 2: trolley travels over the truck
-          .to([trolley, load], { x: travel, duration: 1, ease: 'power2.inOut' }, 1)
-          .to(forklift, { x: 0, duration: 1.2, ease: 'sine.inOut' }, 1.3)
-          .to(forks, { y: 0, duration: 0.6 }, 1.6)
-          // 2 → 2.8: lower onto the flatbed
-          .to(load, { y: 0, duration: 0.8, ease: 'power2.out' }, 2)
-          .to(hook, { y: 0, duration: 0.8, ease: 'power2.out' }, 2)
-          .to(cable, { scaleY: 1, duration: 0.8, ease: 'power2.out' }, 2)
-          // 2.8 → 3.2: hook releases and retracts
-          .to(hook, { y: lift * 0.9, duration: 0.4 }, 2.8)
-          .to(cable, { scaleY: (cableLen + lift * 0.9) / cableLen, duration: 0.4 }, 2.8)
-          // 3.2 → 4.6: truck departs with its load, headlights on, slight suspension bounce
-          .to(beam, { opacity: 1, duration: 0.3 }, 3.1)
-          .to([truck, load], { x: `+=${1100}`, duration: 1.4, ease: 'power2.in' }, 3.2)
-          .to(wheels, { rotation: 900, duration: 1.4, ease: 'power2.in' }, 3.2)
-          .to([truck, load], { y: -3, duration: 0.12, repeat: 9, yoyo: true, ease: 'sine.inOut' }, 3.2)
-          // 4.2 → 5: camera pulls back and the copy steps aside for the next section
-          .to(svg, { scale: 1, duration: 0.8, ease: 'power1.out' }, 4.2);
-        if (copy.current) tl.to(copy.current, { y: -40, opacity: 0, duration: 0.6 }, 4.4);
-
-        // Parallax depth (high tier only): far layers drift less than near ones.
-        if (tier === 'high') {
-          if (skyline) tl.to(skyline, { x: -60 * intensity, duration: 5 }, 0);
-          if (portcranes) tl.to(portcranes, { x: -120 * intensity, duration: 5 }, 0);
-        }
+        tl.to(s, { tx: G.box.x, duration: 1 }, 0)
+          .to(s, { sy: G.box.top - 10, duration: 0.8 }, 1)
+          .to(s, { sy: hoistTop - 10, by: hoistTop, duration: 0.9 }, 1.8)
+          .to(s, { tx: truckX, bx: truckX, duration: 1 }, 2.7)
+          .to(s, { sy: G.chassisTop - 10, by: G.chassisTop, duration: 0.9, ease: 'power2.out' }, 3.7)
+          .to(s, { sy: G.spreaderRest, duration: 0.5 }, 4.6)
+          .to(beam, { opacity: 1, duration: 0.3 }, 4.8)
+          .to(truck, { x: drive, duration: 1.5, ease: 'power2.in' }, 5.1)
+          .to(s, { bx: truckX + drive, duration: 1.5, ease: 'power2.in' }, 5.1)
+          .to(wheels, { rotation: (drive / (44 * 0.42)) * (180 / Math.PI), duration: 1.5, ease: 'power2.in' }, 5.1);
+        if (copy.current) tl.to(copy.current, { y: -40, opacity: 0, duration: 0.6 }, 5.6);
+        if (tier === 'high' && skyline) tl.to(skyline, { x: 50 * intensity, duration: 6.6, ease: 'none' }, 0);
       }, section);
     });
 

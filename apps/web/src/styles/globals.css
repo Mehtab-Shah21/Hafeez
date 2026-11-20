@@ -210,6 +210,29 @@
   }
 }
 
+/* Home scene art: SVG labels stay readable when the scene is mirrored for RTL; the Eye of the
+   Emirates wheel in the skyline turns slowly (ambient loop, off under reduced motion). */
+[dir='rtl'] .hs-text {
+  transform: scaleX(-1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.hs-ferris {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hs-spin 60s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-ferris {
+    animation: none;
+  }
+}
+
 /* Reveal-once (see components/ui/blocks.tsx). */
 .reveal {
   transition:

@@ -21,6 +21,8 @@
     "@radix-ui/react-select": "^2.4.1",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.2.1",
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
     "@tanstack/react-query": "^5.108.1",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-image": "^2.27.3",
@@ -40,11 +42,13 @@
     "react-hook-form": "^7.92.0",
     "react-i18next": "^15.7.4",
     "react-router-dom": "^6.28.0",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.170.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
