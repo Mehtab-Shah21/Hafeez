@@ -55,7 +55,7 @@ export function Navbar({ settings, lang }: { settings: PublicSettingsDTO; lang: 
       >
         <Logo settings={settings} lang={lang} />
 
-        <nav aria-label={t('nav.primary')} className="hidden lg:block">
+        <nav aria-label={t('nav.primary')} className="hidden xl:block">
           <ul className="flex items-center gap-1">
             {settings.navbar.items.map((item) => (
               <li key={item.href}>
@@ -63,7 +63,7 @@ export function Navbar({ settings, lang }: { settings: PublicSettingsDTO; lang: 
                   to={localePath(lang, item.href)}
                   className={({ isActive }) =>
                     cn(
-                      'rounded-full px-4 py-2 text-sm font-medium text-offwhite/80 transition-colors hover:bg-white/10 hover:text-white',
+                      'whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-offwhite/80 transition-colors hover:bg-white/10 hover:text-white',
                       isActive && 'bg-white/10 text-white',
                     )
                   }
@@ -94,7 +94,7 @@ export function Navbar({ settings, lang }: { settings: PublicSettingsDTO; lang: 
             <Dialog.Trigger asChild>
               <button
                 type="button"
-                className="grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 lg:hidden"
+                className="grid size-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 xl:hidden"
                 aria-label={t('nav.menu')}
               >
                 <Menu className="size-5" />

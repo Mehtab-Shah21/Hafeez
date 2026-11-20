@@ -15,7 +15,7 @@ export function Logo({ settings, lang, tone = 'light', className }: { settings: 
             <rect width="32" height="32" rx="9" className="fill-yellow" />
             <path d="M9 23V11h4l3 6 3-6h4v12h-3v-7l-3 6h-2l-3-6v7z" className="fill-navy" />
           </svg>
-          <span className="font-display text-xl uppercase tracking-wide rtl:font-bold rtl:normal-case">{settings.company.name}</span>
+          <span className="whitespace-nowrap font-display text-xl uppercase tracking-wide rtl:font-bold rtl:normal-case">{settings.company.name}</span>
         </span>
       )}
     </Link>
