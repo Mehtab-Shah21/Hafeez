@@ -19,6 +19,7 @@ import {
   Mountain,
   Office,
   Palm,
+  QuayDetails,
   PICKUP_BED_Y,
   Pickup,
   Ship,
@@ -612,6 +613,7 @@ function Story({ lowTier }: { lowTier: boolean }) {
 
       {/* port */}
       <Ship />
+      <QuayDetails />
       <GantryFrame m={m} />
       <group ref={trolley} position={[16, 0, Z0]}>
         <mesh position={[0, 34.6, 0]} material={m.dark} castShadow>

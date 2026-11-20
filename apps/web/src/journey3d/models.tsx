@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unknown-property -- React Three Fiber JSX props (position, args, …) are three.js, not DOM */
 import { RoundedBox } from '@react-three/drei';
-import { forwardRef, useMemo, type MutableRefObject, type Ref } from 'react';
+import { forwardRef, useLayoutEffect, useMemo, useRef, type MutableRefObject, type Ref } from 'react';
 import * as THREE from 'three';
 import { claddingTexture, containerTexture, crateTexture, facadeTexture } from './textures';
 
@@ -78,8 +78,13 @@ export const ContainerBox = forwardRef<THREE.Group, { m: Mats }>(function Contai
   );
 });
 
-/* ── container truck: origin = centre of the container on the chassis, ground level ── */
-export const CHASSIS_TOP = 1.2;
+/*
+ * ── skeletal container chassis + 6×4 cab-over tractor ──
+ * Origin = centre of the 20 ft box on the chassis, ground level; the tractor is at −Z.
+ * Chassis: twin I-beams, four bolsters with twist-locks, gooseneck over the fifth wheel,
+ * landing gear, tri-axle bogie, side guards, rear light bar and underride bar.
+ */
+export const CHASSIS_TOP = 1.42;
 interface TruckProps {
   m: Mats;
   spin: Refs<THREE.Object3D>;
@@ -88,15 +93,124 @@ interface TruckProps {
   doorR: Ref<THREE.Group>;
   crate: Ref<THREE.Mesh>;
 }
+function IBeam({ x, y, z, len, h, m }: { x: number; y: number; z: number; len: number; h: number; m: Mats }) {
+  return (
+    <group position={[x, y, z]}>
+      <mesh material={m.dark} castShadow>
+        <boxGeometry args={[0.04, h, len]} />
+      </mesh>
+      {[-h / 2, h / 2].map((fy) => (
+        <mesh key={fy} position={[0, fy, 0]} material={m.dark} castShadow>
+          <boxGeometry args={[0.16, 0.03, len]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 export const Truck = forwardRef<THREE.Group, TruckProps>(function Truck({ m, spin, cargo, doorL, doorR, crate }, ref) {
+  const T = CHASSIS_TOP;
   return (
     <group ref={ref}>
-      {/* chassis rails */}
-      <mesh position={[0, 1.02, -1]} material={m.dark} castShadow>
-        <boxGeometry args={[1.0, 0.32, 13]} />
+      {/* ── chassis ── */}
+      {[-0.52, 0.52].map((x) => (
+        <IBeam key={x} x={x} y={T - 0.33} z={0.55} len={7.3} h={0.34} m={m} />
+      ))}
+      {/* gooseneck: raised neck over the fifth wheel, stepped down to the main rails */}
+      {[-0.48, 0.48].map((x) => (
+        <group key={x}>
+          <IBeam x={x} y={1.42} z={-4.45} len={2.5} h={0.24} m={m} />
+          <mesh position={[x, 1.24, -3.05]} rotation={[-0.5, 0, 0]} material={m.dark} castShadow>
+            <boxGeometry args={[0.16, 0.3, 0.7]} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 1.27, -5.15]} material={m.dark}>
+        <boxGeometry args={[1.2, 0.04, 1.1]} />
       </mesh>
-      {/* container on the chassis (hidden until the crane sets it down) */}
-      <group ref={cargo} position={[0, CHASSIS_TOP + 1.295, 0]} visible={false}>
+      {/* bolsters + amber twist-locks */}
+      {[-3.03, -1.4, 1.4, 3.03].map((z) => (
+        <group key={z} position={[0, T - 0.08, z]}>
+          <mesh material={m.dark} castShadow receiveShadow>
+            <boxGeometry args={[2.44, 0.16, Math.abs(z) < 2 ? 0.14 : 0.24]} />
+          </mesh>
+          {Math.abs(z) > 2 &&
+            [-1.14, 1.14].map((x) => (
+              <mesh key={x} position={[x, 0.11, 0]} material={m.yellow}>
+                <cylinderGeometry args={[0.045, 0.055, 0.08, 8]} />
+              </mesh>
+            ))}
+        </group>
+      ))}
+      {/* landing gear (raised, coupled) */}
+      {[-0.8, 0.8].map((x) => (
+        <group key={x} position={[x, 0, -2.3]}>
+          <mesh position={[0, 0.88, 0]} material={m.dark} castShadow>
+            <boxGeometry args={[0.16, 0.7, 0.16]} />
+          </mesh>
+          <mesh position={[0, 0.5, 0]} material={m.rim}>
+            <boxGeometry args={[0.12, 0.3, 0.12]} />
+          </mesh>
+          <mesh position={[0, 0.34, 0]} material={m.dark}>
+            <boxGeometry args={[0.28, 0.05, 0.32]} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 0.95, -2.3]} material={m.dark}>
+        <boxGeometry args={[1.6, 0.08, 0.08]} />
+      </mesh>
+      {/* air tank + spare wheel */}
+      <mesh position={[-0.2, 0.95, -0.6]} rotation={[Math.PI / 2, 0, 0]} material={m.dark}>
+        <cylinderGeometry args={[0.16, 0.16, 0.8, 14]} />
+      </mesh>
+      <mesh position={[0.25, 0.86, -1.3]} rotation={[0, 0, Math.PI / 2]} material={m.tyre} castShadow>
+        <cylinderGeometry args={[0.5, 0.5, 0.28, 22]} />
+      </mesh>
+      {/* side underride guards */}
+      {[-1.18, 1.18].map((x) => (
+        <group key={x} position={[x, 0.7, -1.3]}>
+          {[-0.13, 0.13].map((y) => (
+            <mesh key={y} position={[0, y, 0]} material={m.white}>
+              <boxGeometry args={[0.04, 0.1, 2.4]} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* tri-axle bogie with air bags */}
+      {[0.85, 2.15, 3.45].map((z) => (
+        <group key={z}>
+          <mesh position={[0, 0.5, z]} rotation={[0, 0, Math.PI / 2]} material={m.dark}>
+            <cylinderGeometry args={[0.08, 0.08, 2.1, 10]} />
+          </mesh>
+          {[-1, 1].map((sd) => (
+            <group key={sd}>
+              <mesh position={[sd * 0.5, 0.82, z]} material={m.dark}>
+                <cylinderGeometry args={[0.15, 0.15, 0.32, 12]} />
+              </mesh>
+              <Wheel x={sd * 0.98} z={z} r={0.5} w={0.27} m={m} spin={spin} dual />
+            </group>
+          ))}
+        </group>
+      ))}
+      {/* rear: mudflaps, light bar, underride bar */}
+      {[-0.98, 0.98].map((x) => (
+        <mesh key={x} position={[x, 0.5, 4.15]} material={m.tyre}>
+          <boxGeometry args={[0.6, 0.55, 0.03]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 1.05, 4.2]} material={m.dark}>
+        <boxGeometry args={[2.4, 0.22, 0.1]} />
+      </mesh>
+      {[-1.0, -0.75, 0.75, 1.0].map((x) => (
+        <mesh key={x} position={[x, 1.05, 4.26]} material={m.tail}>
+          <boxGeometry args={[0.18, 0.11, 0.03]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.48, 4.25]} material={m.dark} castShadow>
+        <boxGeometry args={[2.3, 0.14, 0.12]} />
+      </mesh>
+
+      {/* ── container on the chassis (hidden until the crane sets it down) ── */}
+      <group ref={cargo} position={[0, T + 1.295, 0]} visible={false}>
         <mesh material={m.boxInside}>
           <boxGeometry args={[2.3, 2.45, 5.9]} />
         </mesh>
@@ -115,7 +229,6 @@ export const Truck = forwardRef<THREE.Group, TruckProps>(function Truck({ m, spi
         <mesh material={m.boxEnd} position={[0, 0, -3.02]}>
           <boxGeometry args={[2.44, 2.59, 0.02]} />
         </mesh>
-        {/* rear doors hinge on the outer edges */}
         <group ref={doorL} position={[-1.22, 0, 3.03]}>
           <mesh material={m.boxEnd} position={[0.61, 0, 0]} castShadow>
             <boxGeometry args={[1.22, 2.55, 0.05]} />
@@ -130,64 +243,98 @@ export const Truck = forwardRef<THREE.Group, TruckProps>(function Truck({ m, spi
           <boxGeometry args={[1.1, 1.1, 1.1]} />
         </mesh>
       </group>
-      {/* twistlock posts */}
-      {[-2.9, 2.9].map((z) => (
-        <mesh key={z} position={[0, CHASSIS_TOP - 0.05, z]} material={m.yellow}>
-          <boxGeometry args={[2.4, 0.1, 0.12]} />
+
+      {/* ── 6×4 cab-over tractor ── */}
+      {[-0.45, 0.45].map((x) => (
+        <mesh key={x} position={[x, 0.98, -7.2]} material={m.dark} castShadow>
+          <boxGeometry args={[0.12, 0.28, 7.0]} />
         </mesh>
       ))}
-      {/* tractor */}
-      <group position={[0, 0, -6.1]}>
-        <RoundedBox args={[2.5, 2.75, 2.25]} radius={0.16} smoothness={4} position={[0, 2.6, 0]} material={m.paint} castShadow />
-        <RoundedBox args={[2.4, 0.75, 1.8]} radius={0.2} smoothness={4} position={[0, 4.2, 0.15]} material={m.paint} castShadow />
-        <mesh position={[0, 3.1, -1.14]} material={m.glass}>
-          <boxGeometry args={[2.2, 1.05, 0.04]} />
+      {/* fifth wheel */}
+      <mesh position={[0, 1.18, -5.3]} material={m.dark} castShadow>
+        <cylinderGeometry args={[0.55, 0.6, 0.12, 20]} />
+      </mesh>
+      {/* catwalk, fuel tank, battery box */}
+      <mesh position={[0, 1.2, -7.6]} material={m.rim}>
+        <boxGeometry args={[1.4, 0.04, 0.9]} />
+      </mesh>
+      <mesh position={[-1.0, 0.85, -7.1]} rotation={[Math.PI / 2, 0, 0]} material={m.chrome} castShadow>
+        <cylinderGeometry args={[0.32, 0.32, 1.5, 20]} />
+      </mesh>
+      <mesh position={[1.0, 0.82, -7.1]} material={m.dark} castShadow>
+        <boxGeometry args={[0.55, 0.6, 1.3]} />
+      </mesh>
+      {/* quarter fenders over the drive axles */}
+      {[-1, 1].map((sd) => (
+        <mesh key={sd} position={[sd * 0.98, 1.18, -5.25]} material={m.dark}>
+          <boxGeometry args={[0.66, 0.04, 2.3]} />
         </mesh>
-        {[-1.26, 1.26].map((x) => (
-          <mesh key={x} position={[x, 3.1, -0.45]} material={m.glass}>
-            <boxGeometry args={[0.03, 0.85, 0.9]} />
+      ))}
+      {/* exhaust stacks */}
+      {[-1.12, 1.12].map((x) => (
+        <mesh key={x} position={[x, 2.75, -8.15]} material={m.chrome} castShadow>
+          <cylinderGeometry args={[0.07, 0.07, 2.9, 12]} />
+        </mesh>
+      ))}
+      <group position={[0, 0, -9.4]}>
+        <RoundedBox args={[2.5, 2.7, 2.3]} radius={0.16} smoothness={4} position={[0, 2.62, 0]} material={m.paint} castShadow />
+        <RoundedBox args={[2.42, 0.8, 1.9]} radius={0.22} smoothness={4} position={[0, 4.25, 0.12]} material={m.paint} castShadow />
+        <mesh position={[0, 4.62, -0.6]} rotation={[0.35, 0, 0]} material={m.paint}>
+          <boxGeometry args={[2.3, 0.05, 0.7]} />
+        </mesh>
+        {/* windscreen + sun visor + roof markers */}
+        <mesh position={[0, 3.12, -1.16]} rotation={[-0.06, 0, 0]} material={m.glass}>
+          <boxGeometry args={[2.22, 1.05, 0.04]} />
+        </mesh>
+        <mesh position={[0, 3.72, -1.2]} rotation={[0.3, 0, 0]} material={m.dark}>
+          <boxGeometry args={[2.3, 0.04, 0.32]} />
+        </mesh>
+        {[-0.6, -0.2, 0.2, 0.6].map((x) => (
+          <mesh key={x} position={[x, 4.67, -0.98]} material={m.head}>
+            <boxGeometry args={[0.12, 0.05, 0.05]} />
           </mesh>
         ))}
-        <mesh position={[0, 2.05, -1.15]} material={m.dark}>
-          <boxGeometry args={[1.8, 0.9, 0.06]} />
-        </mesh>
-        {[-0.9, 0.9].map((x) => (
-          <mesh key={x} position={[x, 1.55, -1.16]} material={m.head}>
+        {[-1.26, 1.26].map((x) => (
+          <mesh key={x} position={[x, 3.12, -0.45]} material={m.glass}>
+            <boxGeometry args={[0.03, 0.85, 0.95]} />
+          </mesh>
+        ))}
+        {/* grille slats, headlights, bumper, steps */}
+        {[1.75, 1.95, 2.15, 2.35].map((y) => (
+          <mesh key={y} position={[0, y, -1.17]} material={m.dark}>
+            <boxGeometry args={[1.8, 0.12, 0.05]} />
+          </mesh>
+        ))}
+        {[-0.92, 0.92].map((x) => (
+          <mesh key={x} position={[x, 1.55, -1.17]} material={m.head}>
             <boxGeometry args={[0.45, 0.16, 0.05]} />
           </mesh>
         ))}
-        <mesh position={[0, 1.2, -1.1]} material={m.paint}>
-          <boxGeometry args={[2.5, 0.42, 0.3]} />
+        <mesh position={[0, 1.2, -1.1]} material={m.dark}>
+          <boxGeometry args={[2.5, 0.42, 0.32]} />
         </mesh>
-        {[-1.42, 1.42].map((x) => (
-          <group key={x}>
-            <mesh position={[x, 3.3, -1.0]} material={m.dark}>
-              <boxGeometry args={[0.12, 0.6, 0.18]} />
+        {[-1.2, 1.2].map((x) => (
+          <mesh key={x} position={[x, 0.95, 0.2]} material={m.rim}>
+            <boxGeometry args={[0.2, 0.04, 0.5]} />
+          </mesh>
+        ))}
+        {/* mirrors on arms */}
+        {[-1, 1].map((sd) => (
+          <group key={sd}>
+            <mesh position={[sd * 1.45, 3.3, -0.95]} material={m.dark}>
+              <boxGeometry args={[0.13, 0.55, 0.18]} />
             </mesh>
-            <mesh position={[x * 0.94, 3.6, -0.9]} material={m.dark}>
-              <boxGeometry args={[0.3, 0.05, 0.05]} />
+            <mesh position={[sd * 1.33, 3.62, -0.9]} material={m.dark}>
+              <boxGeometry args={[0.3, 0.04, 0.04]} />
             </mesh>
           </group>
         ))}
-        {[-1.05, 1.05].map((x) => (
-          <mesh key={x} position={[x, 1.0, 1.9]} rotation={[Math.PI / 2, 0, 0]} material={m.chrome} castShadow>
-            <cylinderGeometry args={[0.32, 0.32, 1.4, 20]} />
-          </mesh>
-        ))}
       </group>
+      {/* steer axle + tandem drive axles */}
       {[-1.05, 1.05].map((x) => (
-        <group key={x}>
-          <Wheel x={x} z={-6.9} r={0.52} w={0.32} m={m} spin={spin} />
-          <Wheel x={x} z={-4.1} r={0.52} w={0.3} m={m} spin={spin} dual />
-          <Wheel x={x} z={2.6} r={0.5} w={0.28} m={m} spin={spin} dual />
-          <Wheel x={x} z={3.9} r={0.5} w={0.28} m={m} spin={spin} dual />
-        </group>
+        <Wheel key={x} x={x} z={-9.2} r={0.52} w={0.32} m={m} spin={spin} />
       ))}
-      {[-0.9, 0.9].map((x) => (
-        <mesh key={x} position={[x, 1.0, 4.6]} material={m.tail}>
-          <boxGeometry args={[0.35, 0.12, 0.05]} />
-        </mesh>
-      ))}
+      {[-5.95, -4.6].map((z) => [-0.98, 0.98].map((x) => <Wheel key={`${z}${x}`} x={x} z={z} r={0.52} w={0.28} m={m} spin={spin} dual />))}
     </group>
   );
 });
@@ -350,55 +497,199 @@ export function GantryFrame({ m }: { m: Mats }) {
   );
 }
 
-/* ── container ship along Z at x≈44 ── */
-const SHIP_COLORS = ['#C2410C', '#0E7490', '#4D5B7C', '#9B2C2C', '#2F6F4E', '#B7791F', '#6B7280'];
+/*
+ * ── post-Panamax container ship moored along Z at x≈44, bow to −Z ──
+ * Flared bow, red boot topping, hatch covers, lashing bridges, instanced container stacks,
+ * aft accommodation block with bridge wings, funnel and radar mast. The box the crane lifts
+ * (row 0, bay 4, tier 2 → x 39, z −1.8) is left out of the stacks.
+ */
+const SHIP_COLORS = ['#C2410C', '#0E7490', '#4D5B7C', '#9B2C2C', '#2F6F4E', '#B7791F', '#6B7280', '#1E3A8A'];
+const SHIP_X = 44;
+const DECK_Y = 4.6;
+const hull = new THREE.MeshStandardMaterial({ color: '#1B2A4A', roughness: 0.6, metalness: 0.3 });
+const boot = new THREE.MeshStandardMaterial({ color: '#8E2424', roughness: 0.65 });
+const deckGreen = new THREE.MeshStandardMaterial({ color: '#3A5A4C', roughness: 0.85 });
+const hatch = new THREE.MeshStandardMaterial({ color: '#46505E', roughness: 0.7, metalness: 0.4 });
+const lash = new THREE.MeshStandardMaterial({ color: '#C9CED6', roughness: 0.5, metalness: 0.6 });
+const house = new THREE.MeshStandardMaterial({ color: '#EEF1F5', roughness: 0.5 });
+const bridgeGlass = new THREE.MeshStandardMaterial({ color: '#13202F', metalness: 0.85, roughness: 0.1 });
+const funnelRed = new THREE.MeshStandardMaterial({ color: '#B91C1C', roughness: 0.45 });
+const funnelTop = new THREE.MeshStandardMaterial({ color: '#111318', roughness: 0.8 });
+function shipStacks() {
+  const out = new Map<string, [number, number, number][]>();
+  for (let bay = 0; bay < 9; bay++)
+    for (let row = 0; row < 5; row++) {
+      const h = ((bay * 7 + row * 3) % 3) + 2; // 2–4 tiers
+      const tiers = row === 0 && bay === 4 ? 2 : h; // the lifted box sat on tier 2 here
+      for (let tier = 0; tier < tiers; tier++) {
+        const c = SHIP_COLORS[(bay * 5 + row * 3 + tier * 7) % SHIP_COLORS.length] ?? '#4D5B7C';
+        const list = out.get(c) ?? [];
+        list.push([39 + row * 2.5, 6.3 + tier * 2.59, -27 + bay * 6.3]);
+        out.set(c, list);
+      }
+    }
+  return out;
+}
+function Stack({ color, at }: { color: string; at: [number, number, number][] }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ map: containerTexture(color), metalness: 0.4, roughness: 0.55 }), [color]);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const o = new THREE.Object3D();
+    at.forEach((p, i) => {
+      o.position.set(p[0], p[1], p[2]);
+      o.updateMatrix();
+      mesh.setMatrixAt(i, o.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [at]);
+  return (
+    <instancedMesh ref={ref} args={[undefined, mat, at.length]} castShadow receiveShadow>
+      <boxGeometry args={[2.44, 2.59, 6.06]} />
+    </instancedMesh>
+  );
+}
 export function Ship() {
-  const boxes = useMemo(() => {
-    const list: { p: [number, number, number]; c: string }[] = [];
-    let i = 0;
-    for (let bay = 0; bay < 9; bay++)
-      for (let row = 0; row < 5; row++)
-        for (let tier = 0; tier < 3; tier++) {
-          i++;
-          const x = 39 + row * 2.5;
-          const z = -27 + bay * 6.3;
-          if (row === 0 && bay === 4 && tier === 2) continue; // the one we lift
-          if (tier === 2 && (i * 7) % 5 === 0) continue;
-          list.push({ p: [x, 6.3 + tier * 2.59, z], c: SHIP_COLORS[(i * 3 + bay) % SHIP_COLORS.length] ?? '#4D5B7C' });
-        }
-    return list;
-  }, []);
-  const mats = useMemo(() => {
-    const map = new Map<string, THREE.MeshStandardMaterial>();
-    for (const c of SHIP_COLORS) map.set(c, new THREE.MeshStandardMaterial({ map: containerTexture(c), metalness: 0.4, roughness: 0.55 }));
-    return map;
+  const stacks = useMemo(shipStacks, []);
+  const bow = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-7.5, 0);
+    s.quadraticCurveTo(-6.2, 8.5, 0, 13);
+    s.quadraticCurveTo(6.2, 8.5, 7.5, 0);
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2); // shape y → −Z (forward), extrusion → +Y
+    return g;
   }, []);
   return (
     <group>
-      <mesh position={[44, 1.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[15, 7, 66]} />
-        <meshStandardMaterial color="#1B2A4A" roughness={0.6} metalness={0.3} />
+      {/* hull, flared bow, boot topping */}
+      <mesh position={[SHIP_X, DECK_Y - 3.3, 0]} material={hull} castShadow receiveShadow>
+        <boxGeometry args={[15, 6.6, 66]} />
       </mesh>
-      <mesh position={[44, -0.6, 0]}>
+      <mesh geometry={bow} material={hull} position={[SHIP_X, -2, -33]} scale={[1, 6.6, 1]} castShadow />
+      <mesh position={[SHIP_X, -0.6, 0]} material={boot}>
         <boxGeometry args={[15.05, 2.8, 66.05]} />
-        <meshStandardMaterial color="#8E2424" roughness={0.6} />
       </mesh>
-      <mesh position={[44, 1.5, -38]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <boxGeometry args={[10.6, 7, 10.6]} />
-        <meshStandardMaterial color="#1B2A4A" roughness={0.6} metalness={0.3} />
+      <mesh geometry={bow} material={boot} position={[SHIP_X, -2, -33.02]} scale={[1.004, 2.8, 1.004]} />
+      <mesh position={[SHIP_X, DECK_Y + 0.02, -1]} material={deckGreen} receiveShadow>
+        <boxGeometry args={[14.4, 0.05, 68]} />
       </mesh>
-      <mesh position={[44, 11, 30]} castShadow>
-        <boxGeometry args={[13, 12, 6]} />
-        <meshStandardMaterial color="#EEF1F5" roughness={0.5} />
-      </mesh>
-      <mesh position={[44, 15, 26.9]}>
-        <boxGeometry args={[12, 1.2, 0.1]} />
-        <meshStandardMaterial color="#13202F" metalness={0.8} roughness={0.1} />
-      </mesh>
-      {boxes.map((b, i) => (
-        <mesh key={i} position={b.p} material={mats.get(b.c)} castShadow>
-          <boxGeometry args={[2.44, 2.59, 6.06]} />
+      {/* bulwark along the sides, breakwater at the bow */}
+      {[-7.4, 7.4].map((dx) => (
+        <mesh key={dx} position={[SHIP_X + dx, DECK_Y + 0.5, -2]} material={hull}>
+          <boxGeometry args={[0.15, 1, 62]} />
         </mesh>
+      ))}
+      <mesh position={[SHIP_X, DECK_Y + 1.6, -31.5]} rotation={[0.35, 0, 0]} material={hull} castShadow>
+        <boxGeometry args={[12, 3, 0.35]} />
+      </mesh>
+      {/* forecastle mast */}
+      <mesh position={[SHIP_X, DECK_Y + 4, -40]} material={lash}>
+        <cylinderGeometry args={[0.15, 0.25, 8, 8]} />
+      </mesh>
+      {/* hatch covers + lashing bridges */}
+      {Array.from({ length: 9 }, (_, bay) => {
+        const z = -27 + bay * 6.3;
+        return (
+          <group key={bay}>
+            <mesh position={[SHIP_X, DECK_Y + 0.2, z]} material={hatch} castShadow receiveShadow>
+              <boxGeometry args={[13, 0.4, 6.1]} />
+            </mesh>
+            {bay % 2 === 1 && (
+              <group position={[SHIP_X, DECK_Y + 1.6, z + 3.15]}>
+                <mesh material={lash}>
+                  <boxGeometry args={[13.2, 0.08, 0.18]} />
+                </mesh>
+                <mesh position={[0, 1.2, 0]} material={lash}>
+                  <boxGeometry args={[13.2, 0.06, 0.06]} />
+                </mesh>
+                {[-6.4, -3.75, -1.25, 1.25, 3.75, 6.4].map((x) => (
+                  <mesh key={x} position={[x, -0.4, 0]} material={lash}>
+                    <boxGeometry args={[0.08, 3.2, 0.12]} />
+                  </mesh>
+                ))}
+              </group>
+            )}
+          </group>
+        );
+      })}
+      {[...stacks.entries()].map(([c, at]) => (
+        <Stack key={c} color={c} at={at} />
+      ))}
+      {/* aft accommodation block, bridge with wings, radar mast, funnel */}
+      <group position={[SHIP_X, DECK_Y, 29.5]}>
+        <mesh position={[0, 7, 0]} material={house} castShadow receiveShadow>
+          <boxGeometry args={[11, 14, 5.6]} />
+        </mesh>
+        {Array.from({ length: 5 }, (_, i) => (
+          <mesh key={i} position={[0, 2.5 + i * 2.6, -2.81]} material={bridgeGlass}>
+            <boxGeometry args={[9.5, 0.7, 0.03]} />
+          </mesh>
+        ))}
+        <mesh position={[0, 15, -0.4]} material={house} castShadow>
+          <boxGeometry args={[18, 2.2, 3.6]} />
+        </mesh>
+        <mesh position={[0, 15.2, -2.21]} material={bridgeGlass}>
+          <boxGeometry args={[17.6, 1.1, 0.03]} />
+        </mesh>
+        <mesh position={[0, 18.5, 0]} material={lash}>
+          <cylinderGeometry args={[0.18, 0.35, 5, 8]} />
+        </mesh>
+        <mesh position={[0, 19.2, 0]} material={lash}>
+          <boxGeometry args={[3.2, 0.12, 0.25]} />
+        </mesh>
+        <mesh position={[0, 21.1, 0]} material={funnelRed}>
+          <sphereGeometry args={[0.22, 10, 10]} />
+        </mesh>
+        <mesh position={[0, 17.5, 1.7]} material={funnelRed} castShadow>
+          <boxGeometry args={[3.6, 5, 2.4]} />
+        </mesh>
+        <mesh position={[0, 20.4, 1.7]} material={funnelTop}>
+          <boxGeometry args={[3.7, 0.9, 2.5]} />
+        </mesh>
+        {/* lifeboat */}
+        <mesh position={[5.8, 9, 1]} rotation={[Math.PI / 2, 0, 0]} material={funnelRed}>
+          <capsuleGeometry args={[0.9, 3.5, 6, 12]} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/* ── quay apron details: crane rails, edge line, rubber fenders, bollards ── */
+export function QuayDetails() {
+  return (
+    <group>
+      {[13, 29].map((x) => (
+        <mesh key={x} position={[x, 0.07, 0]} material={lash} receiveShadow>
+          <boxGeometry args={[0.3, 0.08, 70]} />
+        </mesh>
+      ))}
+      <mesh position={[29.85, 0.06, 15]} material={hatch}>
+        <boxGeometry args={[0.3, 0.06, 70]} />
+      </mesh>
+      <mesh position={[29.4, 0.06, 15]}>
+        <boxGeometry args={[0.25, 0.05, 70]} />
+        <meshStandardMaterial color="#E8B41A" roughness={0.6} />
+      </mesh>
+      <mesh position={[29.9, -1.5, 15]} material={hatch}>
+        <boxGeometry args={[0.3, 3, 70]} />
+      </mesh>
+      {Array.from({ length: 8 }, (_, i) => -18 + i * 9).map((z) => (
+        <group key={z}>
+          <mesh position={[30.3, -0.6, z]} material={funnelTop}>
+            <boxGeometry args={[0.8, 2.4, 2]} />
+          </mesh>
+          <mesh position={[29.2, 0.4, z + 4]} material={funnelTop} castShadow>
+            <cylinderGeometry args={[0.28, 0.32, 0.75, 12]} />
+          </mesh>
+          <mesh position={[29.2, 0.82, z + 4]} material={funnelTop}>
+            <cylinderGeometry args={[0.42, 0.42, 0.12, 12]} />
+          </mesh>
+        </group>
       ))}
     </group>
   );
